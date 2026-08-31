@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Immich Frame</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #000;
+            -webkit-background-color: #000;
+        }
+
+        #slideshow {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #current-image {
+            max-width: 100%;
+            max-height: 100%;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+            display: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        #current-image.active {
+            display: block;
+        }
+
+        #loading-indicator {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #555;
+            font-family: Helvetica, Arial, sans-serif;
+            font-size: 16px;
+            z-index: 10;
+        }
+
+        #error-message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #888;
+            font-family: Helvetica, Arial, sans-serif;
+            font-size: 14px;
+            text-align: center;
+            z-index: 10;
+            display: none;
+        }
+
+        #error-message.visible {
+            display: block;
+        }
+
+        #status-bar {
+            position: fixed;
+            bottom: 8px;
+            right: 12px;
+            color: #333;
+            font-family: Helvetica, Arial, sans-serif;
+            font-size: 11px;
+            z-index: 5;
+        }
+    </style>
+</head>
+<body>
+    <div id="slideshow">
+        <img id="current-image" alt="" draggable="false">
+    </div>
+
+    <div id="loading-indicator">Loading...</div>
+    <div id="error-message">
+        <p>No images found.</p>
+        <p>Check your Immich configuration.</p>
+    </div>
+    <div id="status-bar"></div>
+
+    <script>
+    (function () {
+        "use strict";
+
+        var thumbnails = {{ thumbnails | tojson }};
+        var intervalSec = {{ interval }};
+        var currentIndex = 0;
+        var imagesLoaded = {};
+        var isTransitioning = false;
+
+        var imgEl = document.getElementById("current-image");
+        var loadingEl = document.getElementById("loading-indicator");
+        var errorEl = document.getElementById("error-message");
+        var statusBar = document.getElementById("status-bar");
+
+        function log(msg) {
+            if (window.console && console.log) {
+                console.log("[ImmichFrame] " + msg);
+            }
+        }
+
+        function showError() {
+            errorEl.className = "visible";
+            loadingEl.style.display = "none";
+        }
+
+        function hideLoading() {
+            loadingEl.style.display = "none";
+        }
+
+        function preloadImage(url, callback) {
+            if (imagesLoaded[url]) {
+                callback(true);
+                return;
+            }
+
+            var preloader = new Image();
+            var called = false;
+
+            function done(success) {
+                if (called) return;
+                called = true;
+                if (success) {
+                    imagesLoaded[url] = true;
+                }
+                callback(success);
+            }
+
+            preloader.onload = function () {
+                done(true);
+            };
+
+            preloader.onerror = function () {
+                log("Failed to load: " + url);
+                done(false);
+            };
+
+            preloader.src = url;
+
+            setTimeout(function () {
+                if (!called) {
+                    log("Timeout loading: " + url);
+                    done(false);
+                }
+            }, 15000);
+        }
+
+        function showImage(url) {
+            imgEl.onload = function () {
+                imgEl.className = "active";
+                hideLoading();
+                isTransitioning = false;
+                if (statusBar) {
+                    statusBar.textContent = (currentIndex + 1) + " / " + thumbnails.length;
+                }
+            };
+
+            imgEl.onerror = function () {
+                log("Error displaying: " + url);
+                isTransitioning = false;
+                advanceToNext();
+            };
+
+            imgEl.src = url;
+        }
+
+        function advanceToNext() {
+            if (thumbnails.length === 0) {
+                showError();
+                return;
+            }
+
+            if (isTransitioning) return;
+            isTransitioning = true;
+
+            currentIndex = (currentIndex + 1) % thumbnails.length;
+            var nextUrl = thumbnails[currentIndex];
+
+            preloadImage(nextUrl, function (ok) {
+                if (ok) {
+                    showImage(nextUrl);
+                } else {
+                    isTransitioning = false;
+                    setTimeout(function () {
+                        advanceToNext();
+                    }, 2000);
+                }
+            });
+        }
+
+        function startSlideshow() {
+            if (thumbnails.length === 0) {
+                log("No thumbnails available");
+                showError();
+                return;
+            }
+
+            hideLoading();
+            var firstUrl = thumbnails[0];
+
+            preloadImage(firstUrl, function (ok) {
+                if (ok) {
+                    showImage(firstUrl);
+                    setInterval(advanceToNext, intervalSec * 1000);
+                } else {
+                    log("First image failed, trying next");
+                    currentIndex = 0;
+                    advanceToNext();
+                    setInterval(advanceToNext, intervalSec * 1000);
+                }
+            });
+        }
+
+        log("Starting with " + thumbnails.length + " images, interval: " + intervalSec + "s");
+        startSlideshow();
+
+    })();
+    </script>
+</body>
+</html>
