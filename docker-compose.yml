@@ -8,7 +8,30 @@ services:
     ports:
       - "5000:5000"
     environment:
-      - IMMICH_URL=http://192.168.1.50:2283
+      # Immich connection
+      - IMMICH_URL=http://192.168.16.250:2283
       - IMMICH_API_KEY=your_api_key_here
       - IMMICH_ALBUM_ID=your_album_uuid_here
-      - INTERVAL_SECONDS=15
+
+      # Slideshow settings
+      - INTERVAL_SECONDS=20
+      - TRANSITION_DURATION=2
+      - SHUFFLE=true
+
+      # Display settings
+      - SHOW_CLOCK=true
+      - CLOCK_FORMAT=HH:mm
+      - CLOCK_DATE_FORMAT=eeee, d 'de' MMMM 'de' yyyy
+      - SHOW_PROGRESS_BAR=true
+      - SHOW_PHOTO_DATE=true
+      - SHOW_IMAGE_DESC=true
+      - SHOW_PEOPLE_DESC=true
+      - SHOW_ALBUM_NAME=true
+      - SHOW_IMAGE_LOCATION=true
+
+      # Style settings
+      - PRIMARY_COLOR=#f5deb3
+      - SECONDARY_COLOR=#000000
+      - STYLE=none
+      - BASE_FONT_SIZE=17px
+      - IMAGE_LOCATION_FORMAT=City,State,Country

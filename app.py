@@ -8,6 +8,7 @@ optimized for iOS 9.3.5 Safari and other legacy browsers.
 import os
 import logging
 import json
+import random
 
 import requests
 from flask import Flask, render_template, jsonify, Response
@@ -20,25 +21,46 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Immich connection
 IMMICH_URL = os.environ.get("IMMICH_URL", "http://localhost:2283").rstrip("/")
 IMMICH_API_KEY = os.environ.get("IMMICH_API_KEY", "")
 IMMICH_ALBUM_ID = os.environ.get("IMMICH_ALBUM_ID", "")
-INTERVAL_SECONDS = int(os.environ.get("INTERVAL_SECONDS", "15"))
+
+# Slideshow settings
+INTERVAL_SECONDS = int(os.environ.get("INTERVAL_SECONDS", "20"))
+TRANSITION_DURATION = float(os.environ.get("TRANSITION_DURATION", "2"))
+SHUFFLE = os.environ.get("SHUFFLE", "true").lower() in ("true", "1", "yes")
+
+# Display settings
+SHOW_CLOCK = os.environ.get("SHOW_CLOCK", "true").lower() in ("true", "1", "yes")
+CLOCK_FORMAT = os.environ.get("CLOCK_FORMAT", "HH:mm")
+CLOCK_DATE_FORMAT = os.environ.get("CLOCK_DATE_FORMAT", "eeee, d 'de' MMMM 'de' yyyy")
+SHOW_PROGRESS_BAR = os.environ.get("SHOW_PROGRESS_BAR", "true").lower() in ("true", "1", "yes")
+SHOW_PHOTO_DATE = os.environ.get("SHOW_PHOTO_DATE", "true").lower() in ("true", "1", "yes")
+SHOW_IMAGE_DESC = os.environ.get("SHOW_IMAGE_DESC", "true").lower() in ("true", "1", "yes")
+SHOW_PEOPLE_DESC = os.environ.get("SHOW_PEOPLE_DESC", "true").lower() in ("true", "1", "yes")
+SHOW_ALBUM_NAME = os.environ.get("SHOW_ALBUM_NAME", "true").lower() in ("true", "1", "yes")
+SHOW_IMAGE_LOCATION = os.environ.get("SHOW_IMAGE_LOCATION", "true").lower() in ("true", "1", "yes")
+
+# Style settings
+PRIMARY_COLOR = os.environ.get("PRIMARY_COLOR", "#f5deb3")
+SECONDARY_COLOR = os.environ.get("SECONDARY_COLOR", "#000000")
+STYLE = os.environ.get("STYLE", "none")
+BASE_FONT_SIZE = os.environ.get("BASE_FONT_SIZE", "17px")
+IMAGE_LOCATION_FORMAT = os.environ.get("IMAGE_LOCATION_FORMAT", "City,State,Country")
 
 logger.info("IMMICH_URL: %s", IMMICH_URL)
-logger.info("IMMICH_API_KEY: %s***", IMMICH_API_KEY[:6] if IMMICH_API_KEY else "NOT SET")
 logger.info("IMMICH_ALBUM_ID: %s", IMMICH_ALBUM_ID or "NOT SET")
-logger.info("INTERVAL_SECONDS: %s", INTERVAL_SECONDS)
+logger.info("INTERVAL: %ds, TRANSITION: %.1fs, SHUFFLE: %s", INTERVAL_SECONDS, TRANSITION_DURATION, SHUFFLE)
 
 
 def fetch_album_assets():
-    """Fetch asset list from Immich album API and return asset IDs."""
+    """Fetch asset list from Immich album API and return asset data."""
     if not IMMICH_API_KEY or not IMMICH_ALBUM_ID:
         logger.warning("IMMICH_API_KEY or IMMICH_ALBUM_ID not configured")
         return []
 
     headers = {"x-api-key": IMMICH_API_KEY}
-
     search_url = "{}/api/search/metadata".format(IMMICH_URL)
     payload = {
         "albumIds": [IMMICH_ALBUM_ID],
@@ -70,27 +92,89 @@ def fetch_album_assets():
         logger.warning("Album '%s' has no assets", IMMICH_ALBUM_ID)
         return []
 
-    asset_ids = []
+    result = []
     for asset in assets:
         asset_id = asset.get("id")
-        if asset_id:
-            asset_ids.append(asset_id)
+        if not asset_id:
+            continue
 
-    logger.info("Loaded %d assets from album", len(asset_ids))
-    return asset_ids
+        item = {
+            "id": asset_id,
+            "date": asset.get("localDateTime", asset.get("createdAt", "")),
+            "description": asset.get("description", ""),
+            "people": [],
+            "location": "",
+            "albumName": "",
+        }
+
+        # Extract people names
+        people = asset.get("people", [])
+        if people:
+            item["people"] = [p.get("name", "") for p in people if p.get("name")]
+
+        # Extract location
+        city = asset.get("city", "")
+        state = asset.get("state", "")
+        country = asset.get("country", "")
+        location_parts = []
+        if "City" in IMAGE_LOCATION_FORMAT and city:
+            location_parts.append(city)
+        if "State" in IMAGE_LOCATION_FORMAT and state:
+            location_parts.append(state)
+        if "Country" in IMAGE_LOCATION_FORMAT and country:
+            location_parts.append(country)
+        item["location"] = ", ".join(location_parts)
+
+        result.append(item)
+
+    # Get album name
+    try:
+        album_url = "{}/api/albums/{}".format(IMMICH_URL, IMMICH_ALBUM_ID)
+        album_resp = requests.get(album_url, headers=headers, timeout=15)
+        if album_resp.status_code == 200:
+            album_data = album_resp.json()
+            album_name = album_data.get("albumName", "")
+            for item in result:
+                item["albumName"] = album_name
+    except Exception as exc:
+        logger.debug("Could not fetch album name: %s", exc)
+
+    if SHUFFLE:
+        random.shuffle(result)
+
+    logger.info("Loaded %d assets from album", len(result))
+    return result
 
 
 @app.route("/")
 def index():
     """Serve the main slideshow page."""
-    return render_template("index.html", interval=INTERVAL_SECONDS)
+    return render_template("index.html")
 
 
 @app.route("/api/slideshow")
 def api_slideshow():
     """API endpoint to get slideshow data for JavaScript."""
-    asset_ids = fetch_album_assets()
-    return jsonify({"assets": asset_ids, "interval": INTERVAL_SECONDS})
+    assets = fetch_album_assets()
+    config = {
+        "interval": INTERVAL_SECONDS,
+        "transition": TRANSITION_DURATION,
+        "shuffle": SHUFFLE,
+        "showClock": SHOW_CLOCK,
+        "clockFormat": CLOCK_FORMAT,
+        "clockDateFormat": CLOCK_DATE_FORMAT,
+        "showProgressBar": SHOW_PROGRESS_BAR,
+        "showPhotoDate": SHOW_PHOTO_DATE,
+        "showImageDesc": SHOW_IMAGE_DESC,
+        "showPeopleDesc": SHOW_PEOPLE_DESC,
+        "showAlbumName": SHOW_ALBUM_NAME,
+        "showImageLocation": SHOW_IMAGE_LOCATION,
+        "primaryColor": PRIMARY_COLOR,
+        "secondaryColor": SECONDARY_COLOR,
+        "style": STYLE,
+        "baseFontSize": BASE_FONT_SIZE,
+    }
+    return jsonify({"assets": assets, "config": config})
 
 
 @app.route("/api/thumbnail/<asset_id>")
@@ -129,16 +213,17 @@ def api_debug():
         "api_key_set": bool(IMMICH_API_KEY),
         "album_id": IMMICH_ALBUM_ID,
         "interval": INTERVAL_SECONDS,
+        "shuffle": SHUFFLE,
     }
 
     if not IMMICH_API_KEY or not IMMICH_ALBUM_ID:
         result["error"] = "Missing API key or album ID"
         return jsonify(result)
 
-    asset_ids = fetch_album_assets()
-    result["assets_found"] = len(asset_ids)
-    if asset_ids:
-        result["thumbnail_url"] = "/api/thumbnail/" + asset_ids[0]
+    assets = fetch_album_assets()
+    result["assets_found"] = len(assets)
+    if assets:
+        result["thumbnail_url"] = "/api/thumbnail/" + assets[0]["id"]
 
     return jsonify(result)
 

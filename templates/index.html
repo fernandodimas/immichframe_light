@@ -4,12 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Immich Frame">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="application-name" content="Immich Frame">
     <meta name="theme-color" content="#000000">
-    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%23000' width='100' height='100'/><text x='50' y='65' font-size='50' text-anchor='middle' fill='white'>🖼</text></svg>">
     <title>Immich Frame</title>
     <style>
         * {
@@ -25,6 +24,7 @@
             overflow: hidden;
             background-color: #000;
             -webkit-background-color: #000;
+            font-family: -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif;
         }
 
         #slideshow {
@@ -46,12 +46,118 @@
             -webkit-user-select: none;
             -webkit-touch-callout: none;
             -webkit-tap-highlight-color: transparent;
+            -webkit-transition: opacity var(--transition-duration, 2s) ease-in-out;
+            transition: opacity var(--transition-duration, 2s) ease-in-out;
         }
 
         #current-image.active {
             display: block;
+            opacity: 1;
         }
 
+        #current-image.fading {
+            display: block;
+            opacity: 0;
+        }
+
+        /* Navigation arrows */
+        .nav-arrow {
+            position: fixed;
+            top: 50%;
+            -webkit-transform: translateY(-50%);
+            transform: translateY(-50%);
+            width: 50px;
+            height: 80px;
+            display: -webkit-flex;
+            display: flex;
+            -webkit-align-items: center;
+            align-items: center;
+            -webkit-justify-content: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 100;
+            opacity: 0;
+            -webkit-transition: opacity 0.3s;
+            transition: opacity 0.3s;
+        }
+
+        .nav-arrow:hover {
+            opacity: 1 !important;
+        }
+
+        #nav-prev {
+            left: 10px;
+        }
+
+        #nav-next {
+            right: 10px;
+        }
+
+        .nav-arrow svg {
+            width: 30px;
+            height: 30px;
+            fill: none;
+            stroke: rgba(255,255,255,0.7);
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .nav-arrow:hover svg {
+            stroke: #fff;
+        }
+
+        /* Progress bar */
+        #progress-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            height: 3px;
+            background: var(--primary-color, #f5deb3);
+            z-index: 100;
+            -webkit-transition: width 0.1s linear;
+            transition: width 0.1s linear;
+        }
+
+        /* Info overlay */
+        #info-overlay {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            right: 80px;
+            color: #fff;
+            font-size: var(--base-font-size, 17px);
+            text-shadow: 0 2px 8px rgba(0,0,0,0.9);
+            z-index: 50;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+            pointer-events: none;
+        }
+
+        #info-album {
+            font-size: 1.2em;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        #info-people {
+            font-size: 0.95em;
+            color: var(--primary-color, #f5deb3);
+            margin-bottom: 2px;
+        }
+
+        #info-location {
+            font-size: 0.9em;
+            color: rgba(255,255,255,0.8);
+            margin-bottom: 2px;
+        }
+
+        #info-date {
+            font-size: 0.85em;
+            color: rgba(255,255,255,0.7);
+        }
+
+        /* Clock */
         #clock {
             position: fixed;
             top: 16px;
@@ -81,42 +187,222 @@
             -webkit-user-select: none;
             -webkit-touch-callout: none;
         }
+
+        /* Keep screen awake - invisible video trick for iOS */
+        #keep-awake {
+            position: fixed;
+            top: -10px;
+            left: -10px;
+            width: 1px;
+            height: 1px;
+            opacity: 0.01;
+            z-index: -1;
+        }
     </style>
 </head>
 <body>
+    <!-- Keep screen awake -->
+    <video id="keep-awake" loop muted playsinline>
+        <source src="data:video/mp4;base64,AAAAIGZ0eXBpc29tAAACAGlzb21pc28yYXZjMW1wNDEAAAAIZnJlZQAAAAhtZGF0AAAA1m1vb3YAAABsbXZoZAAAAAAAAAAAAAAAAAAAA+gAAAAAAAEAAAEAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIAAABidWR0YQAAAFptZGF0AAAAO91tbHVjAAAAAAAAABEAAAMAAAAsAAAAFHNtaGQAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAQAAAAEAAAEAAAAAAAwAAAABgJJRHZkb3ZtZGFyAAACMgYVVMRvQiEz/8AAAD/AAAAZx1mLBxtdmhkAAAAAAAAAAAAAAAAAAAAPAAAAD8AAQAAAQAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAACFpb2RzAAAAABCAgIAHFP///v7/AAAAAAJNdHJhawAAAFx0a2hkAAAAA91tbHVjAAAAAAAAABEAAAMAAAAsAAAAAWFtZGF0AAAAAREAAQAoAAEABQoQaZLWiFBEAAAFhAAAAAAAABRkbWRpYQAAACBkcmVmAAAAAAAAAAEAAAAMdXJsIAAAAAEAAAETc3RibAAAAGdzdHNkAAAAAAAAAAEAAABXbXA0YQAAAAAAAAABAAAAAAAAAAAAAgAQAAAAAACnAAAAAAAAACNlc2RzAAAAAAOfgICAFUAVAAAD6gAAAARtdmhkAAAAAAAAAAAAAAAAAAC8AAAAAAEAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQag_btK0nPLWjLmW0wAQAAAAAAEsAAAABRksaFXYLhnpYMAQAAAAAAAXBJAAAAAAADhB0AACQsAAAAAAABhAAAAAAABhAAAAAAFAAAFAAAABwAAQAAABwAAAAAAAQAAABwAAQAAAAEAAAABAAAAFHNtaGQAAAAAAAAAAAACAAEAAAEAAAAAAAEAAAEAAAAAAAEAAAABAAAAAQAAAAEAAAAAAABRAAAAAAABkAAAAAPoAAAAAAAABkAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAAIAAAABwAAAAQAAAAEAAAAEgAAABxpb2RzAAAAABCAgIAHFP///v7/AAAAAAJNdHJhawAAAFx0a2hkAAAAA91tbHVjAAAAAAAAABEAAAMAAAAsAAAAAWFtZGF0AAAAAREAAQAoAAEABQoQaZLWiFBEAAAFhAAAAAAAABRkbWRpYQAAACBkcmVmAAAAAAAAAAEAAAAMdXJsIAAAAAEAAAETc3RibAAAAGdzdHNkAAAAAAAAAAEAAABXbXA0YQAAAAAAAAABAAAAAAAAAAAAAgAQAAAAAACnAAAAAAAAACNlc2RzAAAAAAOfgICAFUAVAAAD6gAAAARtdmhkAAAAAAAAAAAAAAAAAAC8AAAAAAEAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQag_btK0nPLWjLmW0wAQAAAAAAEsAAAABRksaFXYLhnpYMAQAAAAAAAXBJAAAAAAADhB0AACQsAAAAAAABhAAAAAAABhAAAAAAFAAAFAAAABwAAQAAABwAAAAAAAQAAABwAAQAAAAEAAAABAAAAFHNtaGQAAAAAAAAAAAACAAEAAAEAAAAAAAEAAAEAAAAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAIAAAABwAAAAQAAAAEAAAAEgAAABxpb2RzAAAAABCAgIAHFP///v7/AAAAAAJNdHJhawAAAFx0a2hkAAAAA91tbHVjAAAAAAAAABEAAAMAAAAsAAAAAWFtZGF0AAAAAREAAQAoAAEABQoQaZLWiFBEAAAFhAAAAAAAABRkbWRpYQAAACBkcmVmAAAAAAAAAAEAAAAMdXJsIAAAAAEAAAETc3RibAAAAGdzdHNkAAAAAAAAAAEAAABXbXA0YQAAAAAAAAABAAAAAAAAAAAAAgAQAAAAAACnAAAAAAAAACNlc2RzAAAAAAOfgICAFUAVAAAD6gAAAARtdmhkAAAAAAAAAAAAAAAAAAC8AAAAAAEAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQag==" type="video/mp4">
+    </video>
+
+    <!-- Navigation arrows -->
+    <div id="nav-prev" class="nav-arrow" onclick="prevImage()">
+        <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"></polyline></svg>
+    </div>
+    <div id="nav-next" class="nav-arrow" onclick="nextImage()">
+        <svg viewBox="0 0 24 24"><polyline points="9 6 15 12 9 18"></polyline></svg>
+    </div>
+
+    <!-- Progress bar -->
+    <div id="progress-bar"></div>
+
+    <!-- Slideshow -->
     <div id="slideshow">
         <img id="current-image" alt="" draggable="false">
     </div>
 
-    <div id="clock">00:00</div>
+    <!-- Info overlay -->
+    <div id="info-overlay">
+        <div id="info-album"></div>
+        <div id="info-people"></div>
+        <div id="info-location"></div>
+        <div id="info-date"></div>
+    </div>
+
+    <!-- Clock -->
+    <div id="clock"></div>
     <div id="clock-date"></div>
 
     <script>
     (function () {
+        var imgEl = document.getElementById("current-image");
         var clockEl = document.getElementById("clock");
         var clockDateEl = document.getElementById("clock-date");
-        var imgEl = document.getElementById("current-image");
+        var progressBar = document.getElementById("progress-bar");
+        var infoAlbum = document.getElementById("info-album");
+        var infoPeople = document.getElementById("info-people");
+        var infoLocation = document.getElementById("info-location");
+        var infoDate = document.getElementById("info-date");
+        var navPrev = document.getElementById("nav-prev");
+        var navNext = document.getElementById("nav-next");
 
         var assets = [];
-        var intervalSec = 15;
+        var config = {};
         var currentIndex = 0;
         var isTransitioning = false;
+        var progressInterval = null;
+        var progressWidth = 0;
+        var slideInterval = null;
+
+        // Format date helper
+        function formatDate(dateStr, format) {
+            if (!dateStr) return "";
+            var d = new Date(dateStr);
+            if (isNaN(d.getTime())) return "";
+
+            var days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+            var daysShort = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+            var months = ["January", "February", "March", "April", "May", "June",
+                          "July", "August", "September", "October", "November", "December"];
+            var monthsShort = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                               "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+            var day = d.getDate();
+            var month = d.getMonth();
+            var year = d.getFullYear();
+            var hours = d.getHours();
+            var mins = d.getMinutes();
+
+            var result = format;
+            result = result.replace("eeee", days[d.getDay()]);
+            result = result.replace("eee", daysShort[d.getDay()]);
+            result = result.replace("MMMM", months[month]);
+            result = result.replace("MMM", monthsShort[month]);
+            result = result.replace("d", day);
+            result = result.replace("yyyy", year);
+            result = result.replace("HH", hours < 10 ? "0" + hours : "" + hours);
+            result = result.replace("mm", mins < 10 ? "0" + mins : "" + mins);
+
+            // Remove quotes around text
+            result = result.replace(/'/g, "");
+
+            return result;
+        }
+
+        function formatClockDate(dateStr) {
+            var now = new Date();
+            var days = ["Domingo", "Segunda", "Terca", "Quarta", "Quinta", "Sexta", "Sabado"];
+            var months = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun",
+                          "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+            return days[now.getDay()] + ", " + now.getDate() + " " + months[now.getMonth()];
+        }
 
         function padZero(n) {
             return n < 10 ? "0" + n : "" + n;
         }
 
         function updateClock() {
+            if (!config.showClock) {
+                clockEl.style.display = "none";
+                clockDateEl.style.display = "none";
+                return;
+            }
+
             var now = new Date();
             var h = padZero(now.getHours());
             var m = padZero(now.getMinutes());
-            var s = padZero(now.getSeconds());
-            if (clockEl) { clockEl.innerHTML = h + ":" + m + ":" + s; }
-            var days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-            var months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
-                          "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+            var clockText = config.clockFormat || "HH:mm";
+            clockText = clockText.replace("HH", h).replace("mm", m);
+
+            if (clockEl) { clockEl.innerHTML = clockText; }
+
             if (clockDateEl) {
-                clockDateEl.innerHTML = days[now.getDay()] + ", " + now.getDate() + " " + months[now.getMonth()];
+                var daysPt = ["Domingo", "Segunda-feira", "Terca-feira", "Quarta-feira",
+                              "Quinta-feira", "Sexta-feira", "Sabado"];
+                var monthsPt = ["janeiro", "fevereiro", "marco", "abril", "maio", "junho",
+                                "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
+                clockDateEl.innerHTML = daysPt[now.getDay()] + ", " + now.getDate() + " de " + monthsPt[now.getMonth()];
+            }
+        }
+
+        function applyConfig() {
+            var root = document.documentElement;
+            if (config.primaryColor) {
+                root.style.setProperty("--primary-color", config.primaryColor);
+            }
+            if (config.secondaryColor) {
+                root.style.setProperty("--secondary-color", config.secondaryColor);
+                document.body.style.backgroundColor = config.secondaryColor;
+            }
+            if (config.baseFontSize) {
+                root.style.setProperty("--base-font-size", config.baseFontSize);
+            }
+            if (config.transition !== undefined) {
+                root.style.setProperty("--transition-duration", config.transition + "s");
+            }
+
+            if (!config.showProgressBar) {
+                progressBar.style.display = "none";
+            }
+            if (!config.showAlbumName) {
+                infoAlbum.style.display = "none";
+            }
+            if (!config.showPeopleDesc) {
+                infoPeople.style.display = "none";
+            }
+            if (!config.showImageLocation) {
+                infoLocation.style.display = "none";
+            }
+            if (!config.showPhotoDate) {
+                infoDate.style.display = "none";
+            }
+        }
+
+        function updateInfo(asset) {
+            if (config.showAlbumName && asset.albumName) {
+                infoAlbum.innerHTML = asset.albumName;
+            } else {
+                infoAlbum.innerHTML = "";
+            }
+
+            if (config.showPeopleDesc && asset.people && asset.people.length > 0) {
+                infoPeople.innerHTML = asset.people.join(", ");
+            } else {
+                infoPeople.innerHTML = "";
+            }
+
+            if (config.showImageLocation && asset.location) {
+                infoLocation.innerHTML = asset.location;
+            } else {
+                infoLocation.innerHTML = "";
+            }
+
+            if (config.showPhotoDate && asset.date) {
+                infoDate.innerHTML = formatDate(asset.date, config.clockDateFormat || "d 'de' MMMM 'de' yyyy");
+            } else {
+                infoDate.innerHTML = "";
+            }
+        }
+
+        function startProgress() {
+            progressWidth = 0;
+            progressBar.style.width = "0%";
+            var step = 100 / ((config.interval || 20) * 10);
+            progressInterval = window.setInterval(function () {
+                progressWidth += step;
+                if (progressWidth >= 100) {
+                    progressWidth = 100;
+                }
+                progressBar.style.width = progressWidth + "%";
+            }, 100);
+        }
+
+        function stopProgress() {
+            if (progressInterval) {
+                window.clearInterval(progressInterval);
+                progressInterval = null;
             }
         }
 
@@ -124,12 +410,16 @@
             return "/api/thumbnail/" + assetId;
         }
 
-        function showImage(url) {
+        function showImage(url, asset) {
             if (!imgEl) { return; }
+
+            var transitionDuration = (config.transition || 2) * 1000;
 
             imgEl.onload = function () {
                 imgEl.className = "active";
                 isTransitioning = false;
+                updateInfo(asset);
+                startProgress();
             };
 
             imgEl.onerror = function () {
@@ -140,7 +430,7 @@
             imgEl.src = url;
         }
 
-        function preloadAndShow(url) {
+        function preloadAndShow(url, asset) {
             var preloader = new Image();
             var done = false;
 
@@ -148,7 +438,7 @@
                 if (done) { return; }
                 done = true;
                 if (success) {
-                    showImage(url);
+                    showImage(url, asset);
                 } else {
                     isTransitioning = false;
                     advanceToNext();
@@ -165,23 +455,42 @@
             }, 15000);
         }
 
-        function advanceToNext() {
+        function goToIndex(index) {
             if (assets.length === 0) { return; }
             if (isTransitioning) { return; }
+
+            stopProgress();
             isTransitioning = true;
-            currentIndex = (currentIndex + 1) % assets.length;
-            preloadAndShow(getThumbUrl(assets[currentIndex]));
+            currentIndex = index;
+            if (currentIndex >= assets.length) currentIndex = 0;
+            if (currentIndex < 0) currentIndex = assets.length - 1;
+
+            var asset = assets[currentIndex];
+            preloadAndShow(getThumbUrl(asset.id), asset);
         }
+
+        function advanceToNext() {
+            goToIndex(currentIndex + 1);
+        }
+
+        window.prevImage = function () {
+            goToIndex(currentIndex - 1);
+        };
+
+        window.nextImage = function () {
+            goToIndex(currentIndex + 1);
+        };
 
         function startSlideshow() {
             if (assets.length === 0) { return; }
 
             isTransitioning = true;
-            preloadAndShow(getThumbUrl(assets[0]));
+            var asset = assets[0];
+            preloadAndShow(getThumbUrl(asset.id), asset);
 
-            window.setInterval(function () {
+            slideInterval = window.setInterval(function () {
                 advanceToNext();
-            }, intervalSec * 1000);
+            }, (config.interval || 20) * 1000);
         }
 
         function fetchJSON(url, callback) {
@@ -211,12 +520,28 @@
             updateClock();
             window.setInterval(updateClock, 1000);
 
+            // Show nav arrows on touch/hover
+            var hideTimer;
+            function showNav() {
+                navPrev.style.opacity = "0.5";
+                navNext.style.opacity = "0.5";
+                clearTimeout(hideTimer);
+                hideTimer = window.setTimeout(function () {
+                    navPrev.style.opacity = "0";
+                    navNext.style.opacity = "0";
+                }, 3000);
+            }
+
+            document.addEventListener("mousemove", showNav);
+            document.addEventListener("touchstart", showNav);
+
             fetchJSON("/api/slideshow", function (err, data) {
                 if (err) { return; }
 
                 assets = data.assets || [];
-                intervalSec = data.interval || 15;
+                config = data.config || {};
 
+                applyConfig();
                 startSlideshow();
             });
         }
