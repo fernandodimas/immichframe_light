@@ -46,8 +46,12 @@ services:
 ## Portainer Setup
 
 1. Go to **Stacks** > **Add stack**
-2. Choose **Web editor** and paste the `docker-compose.yml` above
-3. Fill in the environment variables under **Environment variables**
+2. Choose **Web editor** and paste the content of `docker-compose.yml`
+3. Fill in the environment variables under **Environment variables**:
+   - `IMMICH_URL` - Your Immich server URL
+   - `IMMICH_API_KEY` - Your API key
+   - `IMMICH_ALBUM_ID` - Album UUID
+   - `INTERVAL_SECONDS` - Slideshow interval (optional, default: 15)
 4. Deploy the stack
 
 ### Environment Variables

@@ -1,0 +1,15 @@
+version: "3.8"
+
+services:
+  immichframe:
+    image: ghcr.io/fernandodimas/immichframe_light:latest
+    build: .
+    container_name: immichframe
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      - IMMICH_URL=http://192.168.1.50:2283
+      - IMMICH_API_KEY=your_api_key_here
+      - IMMICH_ALBUM_ID=your_album_uuid_here
+      - INTERVAL_SECONDS=15
