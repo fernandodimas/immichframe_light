@@ -83,6 +83,36 @@
             font-size: 11px;
             z-index: 5;
         }
+
+        #clock {
+            position: fixed;
+            top: 16px;
+            right: 20px;
+            color: #fff;
+            font-family: Helvetica, Arial, sans-serif;
+            font-size: 48px;
+            font-weight: 300;
+            letter-spacing: 2px;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+            z-index: 20;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+        }
+
+        #clock-date {
+            position: fixed;
+            top: 72px;
+            right: 20px;
+            color: #fff;
+            font-family: Helvetica, Arial, sans-serif;
+            font-size: 18px;
+            font-weight: 300;
+            letter-spacing: 1px;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+            z-index: 20;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+        }
     </style>
 </head>
 <body>
@@ -95,11 +125,39 @@
         <p>No images found.</p>
         <p>Check your Immich configuration.</p>
     </div>
+    <div id="clock">00:00</div>
+    <div id="clock-date"></div>
     <div id="status-bar"></div>
 
     <script>
     (function () {
         "use strict";
+
+        var clockEl = document.getElementById("clock");
+        var clockDateEl = document.getElementById("clock-date");
+
+        function padZero(n) {
+            return n < 10 ? "0" + n : "" + n;
+        }
+
+        function updateClock() {
+            var now = new Date();
+            var h = padZero(now.getHours());
+            var m = padZero(now.getMinutes());
+            var s = padZero(now.getSeconds());
+            clockEl.textContent = h + ":" + m + ":" + s;
+
+            var days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+            var months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                          "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            var dayName = days[now.getDay()];
+            var monthName = months[now.getMonth()];
+            var dayNum = now.getDate();
+            clockDateEl.textContent = dayName + ", " + dayNum + " " + monthName;
+        }
+
+        updateClock();
+        setInterval(updateClock, 1000);
 
         var thumbnails = {{ thumbnails | tojson }};
         var intervalSec = {{ interval }};
