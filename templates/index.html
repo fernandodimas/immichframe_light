@@ -254,52 +254,31 @@
         var progressInterval = null;
         var progressWidth = 0;
         var slideInterval = null;
-
-        // Format date helper
-        function formatDate(dateStr, format) {
-            if (!dateStr) return "";
-            var d = new Date(dateStr);
-            if (isNaN(d.getTime())) return "";
-
-            var days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-            var daysShort = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-            var months = ["January", "February", "March", "April", "May", "June",
-                          "July", "August", "September", "October", "November", "December"];
-            var monthsShort = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
-                               "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
-            var day = d.getDate();
-            var month = d.getMonth();
-            var year = d.getFullYear();
-            var hours = d.getHours();
-            var mins = d.getMinutes();
-
-            var result = format;
-            result = result.replace("eeee", days[d.getDay()]);
-            result = result.replace("eee", daysShort[d.getDay()]);
-            result = result.replace("MMMM", months[month]);
-            result = result.replace("MMM", monthsShort[month]);
-            result = result.replace("d", day);
-            result = result.replace("yyyy", year);
-            result = result.replace("HH", hours < 10 ? "0" + hours : "" + hours);
-            result = result.replace("mm", mins < 10 ? "0" + mins : "" + mins);
-
-            // Remove quotes around text
-            result = result.replace(/'/g, "");
-
-            return result;
-        }
-
-        function formatClockDate(dateStr) {
-            var now = new Date();
-            var days = ["Domingo", "Segunda", "Terca", "Quarta", "Quinta", "Sexta", "Sabado"];
-            var months = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun",
-                          "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-            return days[now.getDay()] + ", " + now.getDate() + " " + months[now.getMonth()];
-        }
+        var serverTimeOffset = 0;
 
         function padZero(n) {
             return n < 10 ? "0" + n : "" + n;
+        }
+
+        function fetchServerTime() {
+            var xhr = new XMLHttpRequest();
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState === 4 && xhr.status === 200) {
+                    try {
+                        var data = JSON.parse(xhr.responseText);
+                        var serverNow = new Date(data.timestamp);
+                        var deviceNow = new Date();
+                        serverTimeOffset = serverNow.getTime() - deviceNow.getTime();
+                    } catch (e) {}
+                }
+            };
+            xhr.open("GET", "/api/time", true);
+            xhr.timeout = 5000;
+            xhr.send(null);
+        }
+
+        function getServerTime() {
+            return new Date(Date.now() + serverTimeOffset);
         }
 
         function updateClock() {
@@ -309,12 +288,13 @@
                 return;
             }
 
-            var now = new Date();
+            var now = getServerTime();
             var h = padZero(now.getHours());
             var m = padZero(now.getMinutes());
+            var s = padZero(now.getSeconds());
 
             var clockText = config.clockFormat || "HH:mm";
-            clockText = clockText.replace("HH", h).replace("mm", m);
+            clockText = clockText.replace("HH", h).replace("mm", m).replace("ss", s);
 
             if (clockEl) { clockEl.innerHTML = clockText; }
 
@@ -517,6 +497,9 @@
         }
 
         function init() {
+            fetchServerTime();
+            setInterval(fetchServerTime, 60000);
+
             updateClock();
             window.setInterval(updateClock, 1000);
 

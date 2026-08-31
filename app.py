@@ -9,6 +9,7 @@ import os
 import logging
 import json
 import random
+from datetime import datetime
 
 import requests
 from flask import Flask, render_template, jsonify, Response
@@ -226,6 +227,22 @@ def api_debug():
         result["thumbnail_url"] = "/api/thumbnail/" + assets[0]["id"]
 
     return jsonify(result)
+
+
+@app.route("/api/time")
+def api_time():
+    """Return current server time."""
+    now = datetime.now()
+    return jsonify({
+        "timestamp": now.isoformat(),
+        "hour": now.hour,
+        "minute": now.minute,
+        "second": now.second,
+        "day": now.day,
+        "month": now.month,
+        "year": now.year,
+        "weekday": now.weekday(),
+    })
 
 
 if __name__ == "__main__":
