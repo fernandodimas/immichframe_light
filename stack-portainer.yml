@@ -2,7 +2,9 @@ version: "3.8"
 
 services:
   immichframe:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: immichframe
     restart: unless-stopped
     ports:

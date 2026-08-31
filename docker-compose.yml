@@ -2,8 +2,9 @@ version: "3.8"
 
 services:
   immichframe:
-    image: ghcr.io/fernandodimas/immichframe_light:latest
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: immichframe
     restart: unless-stopped
     ports:
