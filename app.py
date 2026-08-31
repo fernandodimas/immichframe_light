@@ -278,12 +278,17 @@ def api_weather():
     except ValueError:
         return jsonify({"error": "Invalid coordinates", "enabled": False})
 
+    # Map language to OpenWeatherMap lang code
+    lang_map = {"pt": "pt_br", "en": "en", "es": "es", "fr": "fr", "de": "de"}
+    owm_lang = lang_map.get(LANGUAGE, "en")
+
     url = "https://api.openweathermap.org/data/2.5/weather"
     params = {
         "lat": lat.strip(),
         "lon": lon.strip(),
         "appid": WEATHER_API_KEY,
         "units": UNIT_SYSTEM,
+        "lang": owm_lang,
     }
 
     try:
@@ -295,7 +300,6 @@ def api_weather():
         data = resp.json()
         temp = data.get("main", {}).get("temp", 0)
         description = data.get("weather", [{}])[0].get("description", "")
-        icon_id = data.get("weather", [{}])[0].get("id", "")
         icon_code = data.get("weather", [{}])[0].get("icon", "")
         city_name = data.get("name", "")
 
