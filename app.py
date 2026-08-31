@@ -7,6 +7,7 @@ optimized for iOS 9.3.5 Safari and other legacy browsers.
 
 import os
 import logging
+import json
 
 import requests
 from flask import Flask, render_template, jsonify
@@ -89,9 +90,10 @@ def fetch_album_assets():
 def index():
     """Serve the main slideshow page."""
     thumbnails = fetch_album_assets()
+    thumbnails_json = json.dumps(thumbnails)
     return render_template(
         "index.html",
-        thumbnails=thumbnails,
+        thumbnails_json=thumbnails_json,
         interval=INTERVAL_SECONDS,
     )
 

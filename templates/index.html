@@ -8,6 +8,7 @@
         * {
             margin: 0;
             padding: 0;
+            -webkit-box-sizing: border-box;
             box-sizing: border-box;
         }
 
@@ -25,17 +26,17 @@
             left: 0;
             width: 100%;
             height: 100%;
+            display: -webkit-flex;
             display: flex;
+            -webkit-align-items: center;
             align-items: center;
+            -webkit-justify-content: center;
             justify-content: center;
         }
 
         #current-image {
             max-width: 100%;
             max-height: 100%;
-            width: auto;
-            height: auto;
-            object-fit: contain;
             display: none;
             -webkit-user-select: none;
             -webkit-touch-callout: none;
@@ -50,6 +51,7 @@
             position: fixed;
             top: 50%;
             left: 50%;
+            -webkit-transform: translate(-50%, -50%);
             transform: translate(-50%, -50%);
             color: #555;
             font-family: Helvetica, Arial, sans-serif;
@@ -61,6 +63,7 @@
             position: fixed;
             top: 50%;
             left: 50%;
+            -webkit-transform: translate(-50%, -50%);
             transform: translate(-50%, -50%);
             color: #888;
             font-family: Helvetica, Arial, sans-serif;
@@ -78,7 +81,7 @@
             position: fixed;
             bottom: 8px;
             right: 12px;
-            color: #333;
+            color: #555;
             font-family: Helvetica, Arial, sans-serif;
             font-size: 11px;
             z-index: 5;
@@ -116,7 +119,7 @@
     </style>
 </head>
 <body>
-    <div id="slideshow">
+    <div id="slideshow" data-thumbnails='{{ thumbnails_json|safe }}' data-interval="{{ interval }}">
         <img id="current-image" alt="" draggable="false">
     </div>
 
@@ -131,10 +134,18 @@
 
     <script>
     (function () {
-        "use strict";
-
         var clockEl = document.getElementById("clock");
         var clockDateEl = document.getElementById("clock-date");
+        var imgEl = document.getElementById("current-image");
+        var loadingEl = document.getElementById("loading-indicator");
+        var errorEl = document.getElementById("error-message");
+        var statusBar = document.getElementById("status-bar");
+
+        function log(msg) {
+            if (window.console && console.log) {
+                console.log("[Frame] " + msg);
+            }
+        }
 
         function padZero(n) {
             return n < 10 ? "0" + n : "" + n;
@@ -145,100 +156,95 @@
             var h = padZero(now.getHours());
             var m = padZero(now.getMinutes());
             var s = padZero(now.getSeconds());
-            clockEl.textContent = h + ":" + m + ":" + s;
-
+            if (clockEl) {
+                clockEl.innerHTML = h + ":" + m + ":" + s;
+            }
             var days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
             var months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
                           "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-            var dayName = days[now.getDay()];
-            var monthName = months[now.getMonth()];
-            var dayNum = now.getDate();
-            clockDateEl.textContent = dayName + ", " + dayNum + " " + monthName;
+            if (clockDateEl) {
+                clockDateEl.innerHTML = days[now.getDay()] + ", " + now.getDate() + " " + months[now.getMonth()];
+            }
         }
 
-        updateClock();
-        setInterval(updateClock, 1000);
-
-        var thumbnails = {{ thumbnails | tojson }};
-        var intervalSec = {{ interval }};
-        var currentIndex = 0;
-        var imagesLoaded = {};
-        var isTransitioning = false;
-
-        var imgEl = document.getElementById("current-image");
-        var loadingEl = document.getElementById("loading-indicator");
-        var errorEl = document.getElementById("error-message");
-        var statusBar = document.getElementById("status-bar");
-
-        function log(msg) {
-            if (window.console && console.log) {
-                console.log("[ImmichFrame] " + msg);
-            }
+        function startClock() {
+            updateClock();
+            window.setInterval(updateClock, 1000);
         }
 
         function showError() {
-            errorEl.className = "visible";
-            loadingEl.style.display = "none";
+            if (errorEl) { errorEl.className = "visible"; }
+            if (loadingEl) { loadingEl.style.display = "none"; }
         }
 
         function hideLoading() {
-            loadingEl.style.display = "none";
+            if (loadingEl) { loadingEl.style.display = "none"; }
         }
 
-        function preloadImage(url, callback) {
-            if (imagesLoaded[url]) {
-                callback(true);
-                return;
+        var thumbnails = [];
+        var intervalSec = 15;
+        var currentIndex = 0;
+        var isTransitioning = false;
+        var timerId = null;
+
+        function parseThumbnails(raw) {
+            if (!raw) { return []; }
+            if (typeof raw === "object") { return raw; }
+            try {
+                return JSON.parse(raw);
+            } catch (e) {
+                log("Failed to parse thumbnails JSON");
+                return [];
             }
-
-            var preloader = new Image();
-            var called = false;
-
-            function done(success) {
-                if (called) return;
-                called = true;
-                if (success) {
-                    imagesLoaded[url] = true;
-                }
-                callback(success);
-            }
-
-            preloader.onload = function () {
-                done(true);
-            };
-
-            preloader.onerror = function () {
-                log("Failed to load: " + url);
-                done(false);
-            };
-
-            preloader.src = url;
-
-            setTimeout(function () {
-                if (!called) {
-                    log("Timeout loading: " + url);
-                    done(false);
-                }
-            }, 15000);
         }
 
         function showImage(url) {
+            if (!imgEl) { return; }
+
             imgEl.onload = function () {
                 imgEl.className = "active";
                 hideLoading();
                 isTransitioning = false;
                 if (statusBar) {
-                    statusBar.textContent = (currentIndex + 1) + " / " + thumbnails.length;
+                    statusBar.innerHTML = (currentIndex + 1) + " / " + thumbnails.length;
                 }
             };
 
             imgEl.onerror = function () {
-                log("Error displaying: " + url);
+                log("Error: " + url);
                 isTransitioning = false;
                 advanceToNext();
             };
 
             imgEl.src = url;
+        }
+
+        function preloadAndShow(url) {
+            var preloader = new Image();
+            var done = false;
+
+            function onDone(success) {
+                if (done) { return; }
+                done = true;
+                if (success) {
+                    showImage(url);
+                } else {
+                    isTransitioning = false;
+                    advanceToNext();
+                }
+            }
+
+            preloader.onload = function () { onDone(true); };
+            preloader.onerror = function () { onDone(false); };
+
+            preloader.src = url;
+
+            window.setTimeout(function () {
+                if (!done) {
+                    log("Timeout: " + url);
+                    onDone(false);
+                }
+            }, 15000);
         }
 
         function advanceToNext() {
@@ -247,49 +253,47 @@
                 return;
             }
 
-            if (isTransitioning) return;
+            if (isTransitioning) { return; }
             isTransitioning = true;
 
             currentIndex = (currentIndex + 1) % thumbnails.length;
-            var nextUrl = thumbnails[currentIndex];
-
-            preloadImage(nextUrl, function (ok) {
-                if (ok) {
-                    showImage(nextUrl);
-                } else {
-                    isTransitioning = false;
-                    setTimeout(function () {
-                        advanceToNext();
-                    }, 2000);
-                }
-            });
+            preloadAndShow(thumbnails[currentIndex]);
         }
 
         function startSlideshow() {
             if (thumbnails.length === 0) {
-                log("No thumbnails available");
+                log("No images");
                 showError();
                 return;
             }
 
             hideLoading();
-            var firstUrl = thumbnails[0];
+            isTransitioning = true;
+            preloadAndShow(thumbnails[0]);
 
-            preloadImage(firstUrl, function (ok) {
-                if (ok) {
-                    showImage(firstUrl);
-                    setInterval(advanceToNext, intervalSec * 1000);
-                } else {
-                    log("First image failed, trying next");
-                    currentIndex = 0;
-                    advanceToNext();
-                    setInterval(advanceToNext, intervalSec * 1000);
-                }
-            });
+            timerId = window.setInterval(function () {
+                advanceToNext();
+            }, intervalSec * 1000);
         }
 
-        log("Starting with " + thumbnails.length + " images, interval: " + intervalSec + "s");
-        startSlideshow();
+        function init() {
+            startClock();
+
+            var rawData = document.getElementById("slideshow").getAttribute("data-thumbnails");
+            var rawInterval = document.getElementById("slideshow").getAttribute("data-interval");
+
+            thumbnails = parseThumbnails(rawData);
+            intervalSec = parseInt(rawInterval, 10) || 15;
+
+            log("Images: " + thumbnails.length + ", Interval: " + intervalSec + "s");
+            startSlideshow();
+        }
+
+        if (document.readyState === "complete" || document.readyState === "interactive") {
+            window.setTimeout(init, 0);
+        } else {
+            document.addEventListener("DOMContentLoaded", init);
+        }
 
     })();
     </script>
