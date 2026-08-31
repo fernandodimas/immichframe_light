@@ -48,18 +48,10 @@
             -webkit-user-select: none;
             -webkit-touch-callout: none;
             -webkit-tap-highlight-color: transparent;
-            -webkit-transition: opacity var(--transition-duration, 2s) ease-in-out;
-            transition: opacity var(--transition-duration, 2s) ease-in-out;
         }
 
         #current-image.active {
             display: block;
-            opacity: 1;
-        }
-
-        #current-image.fading {
-            display: block;
-            opacity: 0;
         }
 
         /* Navigation arrows */
@@ -99,7 +91,7 @@
             width: 30px;
             height: 30px;
             fill: none;
-            stroke: rgba(255,255,255,0.7);
+            stroke: var(--primary-color, #f5deb3);
             stroke-width: 2;
             stroke-linecap: round;
             stroke-linejoin: round;
@@ -121,76 +113,75 @@
             transition: width 0.1s linear;
         }
 
-        /* Info overlay */
-        #info-overlay {
+        /* Bottom left - Clock and date */
+        #bottom-left {
             position: fixed;
             bottom: 20px;
             left: 20px;
-            right: 80px;
-            color: #fff;
-            font-size: var(--base-font-size, 17px);
-            text-shadow: 0 2px 8px rgba(0,0,0,0.9);
             z-index: 50;
             -webkit-user-select: none;
             -webkit-touch-callout: none;
             pointer-events: none;
         }
 
-        #info-album {
-            font-size: 1.2em;
-            font-weight: 600;
-            margin-bottom: 4px;
-        }
-
-        #info-people {
-            font-size: 0.95em;
-            color: var(--primary-color, #f5deb3);
-            margin-bottom: 2px;
-        }
-
-        #info-location {
-            font-size: 0.9em;
-            color: rgba(255,255,255,0.8);
-            margin-bottom: 2px;
-        }
-
-        #info-date {
-            font-size: 0.85em;
-            color: rgba(255,255,255,0.7);
-        }
-
-        /* Clock */
         #clock {
-            position: fixed;
-            top: 16px;
-            right: 20px;
-            color: #fff;
+            color: var(--primary-color, #f5deb3);
             font-family: Helvetica, Arial, sans-serif;
-            font-size: 48px;
+            font-size: 64px;
             font-weight: 300;
             letter-spacing: 2px;
-            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
-            z-index: 20;
-            -webkit-user-select: none;
-            -webkit-touch-callout: none;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9);
         }
 
         #clock-date {
-            position: fixed;
-            top: 72px;
-            right: 20px;
-            color: #fff;
+            color: var(--primary-color, #f5deb3);
             font-family: Helvetica, Arial, sans-serif;
             font-size: 18px;
             font-weight: 300;
             letter-spacing: 1px;
-            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
-            z-index: 20;
-            -webkit-user-select: none;
-            -webkit-touch-callout: none;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9);
+            margin-top: 4px;
         }
 
-        /* Keep screen awake - invisible video trick for iOS */
+        /* Bottom right - Photo info */
+        #bottom-right {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            text-align: right;
+            color: var(--primary-color, #f5deb3);
+            font-size: var(--base-font-size, 17px);
+            text-shadow: 0 2px 8px rgba(0,0,0,0.9);
+            z-index: 50;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+            pointer-events: none;
+            max-width: 60%;
+        }
+
+        #info-album {
+            font-size: 1.3em;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+
+        #info-people {
+            font-size: 1em;
+            margin-bottom: 4px;
+        }
+
+        #info-location {
+            font-size: 0.95em;
+            opacity: 0.9;
+            margin-bottom: 4px;
+        }
+
+        #info-date {
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+
+        /* Keep screen awake */
         #keep-awake {
             position: fixed;
             top: -10px;
@@ -205,7 +196,7 @@
 <body>
     <!-- Keep screen awake -->
     <video id="keep-awake" loop muted playsinline>
-        <source src="data:video/mp4;base64,AAAAIGZ0eXBpc29tAAACAGlzb21pc28yYXZjMW1wNDEAAAAIZnJlZQAAAAhtZGF0AAAA1m1vb3YAAABsbXZoZAAAAAAAAAAAAAAAAAAAA+gAAAAAAAEAAAEAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIAAABidWR0YQAAAFptZGF0AAAAO91tbHVjAAAAAAAAABEAAAMAAAAsAAAAFHNtaGQAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAQAAAAEAAAEAAAAAAAwAAAABgJJRHZkb3ZtZGFyAAACMgYVVMRvQiEz/8AAAD/AAAAZx1mLBxtdmhkAAAAAAAAAAAAAAAAAAAAPAAAAD8AAQAAAQAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAACFpb2RzAAAAABCAgIAHFP///v7/AAAAAAJNdHJhawAAAFx0a2hkAAAAA91tbHVjAAAAAAAAABEAAAMAAAAsAAAAAWFtZGF0AAAAAREAAQAoAAEABQoQaZLWiFBEAAAFhAAAAAAAABRkbWRpYQAAACBkcmVmAAAAAAAAAAEAAAAMdXJsIAAAAAEAAAETc3RibAAAAGdzdHNkAAAAAAAAAAEAAABXbXA0YQAAAAAAAAABAAAAAAAAAAAAAgAQAAAAAACnAAAAAAAAACNlc2RzAAAAAAOfgICAFUAVAAAD6gAAAARtdmhkAAAAAAAAAAAAAAAAAAC8AAAAAAEAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQag_btK0nPLWjLmW0wAQAAAAAAEsAAAABRksaFXYLhnpYMAQAAAAAAAXBJAAAAAAADhB0AACQsAAAAAAABhAAAAAAABhAAAAAAFAAAFAAAABwAAQAAABwAAAAAAAQAAABwAAQAAAAEAAAABAAAAFHNtaGQAAAAAAAAAAAACAAEAAAEAAAAAAAEAAAEAAAAAAAEAAAABAAAAAQAAAAEAAAAAAABRAAAAAAABkAAAAAPoAAAAAAAABkAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAAIAAAABwAAAAQAAAAEAAAAEgAAABxpb2RzAAAAABCAgIAHFP///v7/AAAAAAJNdHJhawAAAFx0a2hkAAAAA91tbHVjAAAAAAAAABEAAAMAAAAsAAAAAWFtZGF0AAAAAREAAQAoAAEABQoQaZLWiFBEAAAFhAAAAAAAABRkbWRpYQAAACBkcmVmAAAAAAAAAAEAAAAMdXJsIAAAAAEAAAETc3RibAAAAGdzdHNkAAAAAAAAAAEAAABXbXA0YQAAAAAAAAABAAAAAAAAAAAAAgAQAAAAAACnAAAAAAAAACNlc2RzAAAAAAOfgICAFUAVAAAD6gAAAARtdmhkAAAAAAAAAAAAAAAAAAC8AAAAAAEAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQag_btK0nPLWjLmW0wAQAAAAAAEsAAAABRksaFXYLhnpYMAQAAAAAAAXBJAAAAAAADhB0AACQsAAAAAAABhAAAAAAABhAAAAAAFAAAFAAAABwAAQAAABwAAAAAAAQAAABwAAQAAAAEAAAABAAAAFHNtaGQAAAAAAAAAAAACAAEAAAEAAAAAAAEAAAEAAAAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAEAAAABAAAAAQAAAAIAAAABwAAAAQAAAAEAAAAEgAAABxpb2RzAAAAABCAgIAHFP///v7/AAAAAAJNdHJhawAAAFx0a2hkAAAAA91tbHVjAAAAAAAAABEAAAMAAAAsAAAAAWFtZGF0AAAAAREAAQAoAAEABQoQaZLWiFBEAAAFhAAAAAAAABRkbWRpYQAAACBkcmVmAAAAAAAAAAEAAAAMdXJsIAAAAAEAAAETc3RibAAAAGdzdHNkAAAAAAAAAAEAAABXbXA0YQAAAAAAAAABAAAAAAAAAAAAAgAQAAAAAACnAAAAAAAAACNlc2RzAAAAAAOfgICAFUAVAAAD6gAAAARtdmhkAAAAAAAAAAAAAAAAAAC8AAAAAAEAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQag==" type="video/mp4">
+        <source src="data:video/mp4;base64,AAAAIGZ0eXBpc29tAAACAGlzb21pc28yYXZjMW1wNDEAAAAIZnJlZQAAAAhtZGF0AAAA1m1vb3YAAABsbXZoZAAAAAAAAAAAAAAAAAAAA+gAAAAAAAEAAAEAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIAAABidWR0YQAAAFptZGF0AAAAO91tbHVjAAAAAAAAABEAAAMAAAAsAAAAFHNtaGQAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAQAAAAEAAAEAAAAAAAwAAAABgJJRHZkb3ZtZGFyAAACMgYVVMRvQiEz/8AAAD/AAAAZx1mLBxtdmhkAAAAAAAAAAAAAAAAAAAAPAAAAD8AAQAAAQAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAACFpb2RzAAAAABCAgIAHFP///v7/AAAAAAJNdHJhawAAAFx0a2hkAAAAA91tbHVjAAAAAAAAABEAAAMAAAAsAAAAAWFtZGF0AAAAAREAAQAoAAEABQoQaZLWiFBEAAAFhAAAAAAAABRkbWRpYQAAACBkcmVmAAAAAAAAAAEAAAAMdXJsIAAAAAEAAAETc3RibAAAAGdzdHNkAAAAAAAAAAEAAABXbXA0YQAAAAAAAAABAAAAAAAAAAAAAgAQAAAAAACnAAAAAAAAACNlc2RzAAAAAAOfgICAFUAVAAAD6gAAAARtdmhkAAAAAAAAAAAAAAAAAAC8AAAAAAEAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQag==" type="video/mp4">
     </video>
 
     <!-- Navigation arrows -->
@@ -224,17 +215,19 @@
         <img id="current-image" alt="" draggable="false">
     </div>
 
-    <!-- Info overlay -->
-    <div id="info-overlay">
+    <!-- Bottom left - Clock and date -->
+    <div id="bottom-left">
+        <div id="clock"></div>
+        <div id="clock-date"></div>
+    </div>
+
+    <!-- Bottom right - Photo info -->
+    <div id="bottom-right">
         <div id="info-album"></div>
         <div id="info-people"></div>
         <div id="info-location"></div>
         <div id="info-date"></div>
     </div>
-
-    <!-- Clock -->
-    <div id="clock"></div>
-    <div id="clock-date"></div>
 
     <script>
     (function () {
@@ -304,16 +297,14 @@
             var day = d.getDate();
             var month = d.getMonth();
             var year = d.getFullYear();
-            var hours = d.getHours();
-            var mins = d.getMinutes();
 
             var result = format;
             result = result.replace("eeee", days[d.getDay()]);
             result = result.replace("MMMM", months[month]);
             result = result.replace("yyyy", year);
-            result = result.replace("HH", hours < 10 ? "0" + hours : "" + hours);
-            result = result.replace("mm", mins < 10 ? "0" + mins : "" + mins);
+            result = result.replace(/\bdd\b/, day < 10 ? "0" + day : "" + day);
             result = result.replace(/\bd\b/, day);
+            result = result.replace("MM", month + 1 < 10 ? "0" + (month + 1) : "" + (month + 1));
 
             result = result.replace(/'/g, "");
 
@@ -412,7 +403,8 @@
             }
 
             if (config.showPhotoDate && asset.date) {
-                infoDate.innerHTML = formatDate(asset.date, config.clockDateFormat || "d 'de' MMMM 'de' yyyy");
+                var fmt = config.photoDateFormat || "dd/MM/yyyy";
+                infoDate.innerHTML = formatDate(asset.date, fmt);
             } else {
                 infoDate.innerHTML = "";
             }
@@ -444,8 +436,6 @@
 
         function showImage(url, asset) {
             if (!imgEl) { return; }
-
-            var transitionDuration = (config.transition || 2) * 1000;
 
             imgEl.onload = function () {
                 imgEl.className = "active";
@@ -555,7 +545,6 @@
             updateClock();
             window.setInterval(updateClock, 1000);
 
-            // Show nav arrows on touch/hover
             var hideTimer;
             function showNav() {
                 navPrev.style.opacity = "0.5";

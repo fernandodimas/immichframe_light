@@ -38,6 +38,7 @@ CLOCK_FORMAT = os.environ.get("CLOCK_FORMAT", "HH:mm")
 CLOCK_DATE_FORMAT = os.environ.get("CLOCK_DATE_FORMAT", "eeee, d 'de' MMMM 'de' yyyy")
 SHOW_PROGRESS_BAR = os.environ.get("SHOW_PROGRESS_BAR", "true").lower() in ("true", "1", "yes")
 SHOW_PHOTO_DATE = os.environ.get("SHOW_PHOTO_DATE", "true").lower() in ("true", "1", "yes")
+PHOTO_DATE_FORMAT = os.environ.get("PHOTO_DATE_FORMAT", "dd/MM/yyyy")
 SHOW_IMAGE_DESC = os.environ.get("SHOW_IMAGE_DESC", "true").lower() in ("true", "1", "yes")
 SHOW_PEOPLE_DESC = os.environ.get("SHOW_PEOPLE_DESC", "true").lower() in ("true", "1", "yes")
 SHOW_ALBUM_NAME = os.environ.get("SHOW_ALBUM_NAME", "true").lower() in ("true", "1", "yes")
@@ -167,6 +168,7 @@ def api_slideshow():
         "clockDateFormat": CLOCK_DATE_FORMAT,
         "showProgressBar": SHOW_PROGRESS_BAR,
         "showPhotoDate": SHOW_PHOTO_DATE,
+        "photoDateFormat": PHOTO_DATE_FORMAT,
         "showImageDesc": SHOW_IMAGE_DESC,
         "showPeopleDesc": SHOW_PEOPLE_DESC,
         "showAlbumName": SHOW_ALBUM_NAME,

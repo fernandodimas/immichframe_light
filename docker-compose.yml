@@ -24,6 +24,7 @@ services:
       - CLOCK_DATE_FORMAT=eeee, d 'de' MMMM 'de' yyyy
       - SHOW_PROGRESS_BAR=true
       - SHOW_PHOTO_DATE=true
+      - PHOTO_DATE_FORMAT=dd/MM/yyyy
       - SHOW_IMAGE_DESC=true
       - SHOW_PEOPLE_DESC=true
       - SHOW_ALBUM_NAME=true
