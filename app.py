@@ -136,40 +136,16 @@ def fetch_album_assets():
             if detail_resp.status_code == 200:
                 detail = detail_resp.json()
 
-                # Log full detail for first asset only
-                if len(result) == 0:
-                    import json as json_mod
-                    logger.info("Full asset detail: %s", json_mod.dumps(detail, indent=2, default=str)[:3000])
-
                 # Extract people names
                 people = detail.get("people", [])
                 if people:
-                    item["people"] = [p.get("name", "") for p in people if p.get("name")]
+                    item["people"] = [p.get("name", "").strip() for p in people if p.get("name")]
 
-                # Try multiple possible location field names
-                city = detail.get("city", "") or detail.get("exifImageCity", "")
-                state = detail.get("state", "") or detail.get("exifImageState", "")
-                country = detail.get("country", "") or detail.get("exifImageCountry", "")
-
-                # Also try nested smartInfo or exif
-                if not city:
-                    smart = detail.get("smartInfo", {})
-                    city = smart.get("city", "")
-                if not state:
-                    smart = detail.get("smartInfo", {})
-                    state = smart.get("state", "")
-                if not country:
-                    smart = detail.get("smartInfo", {})
-                    country = smart.get("country", "")
-
-                # Try exifInfo
-                exif = detail.get("exifInfo", {})
-                if not city:
-                    city = exif.get("city", "")
-                if not state:
-                    state = exif.get("state", "")
-                if not country:
-                    country = exif.get("country", "")
+                # Extract location from exifInfo
+                exif = detail.get("exifInfo", {}) or {}
+                city = (exif.get("city") or "").strip()
+                state = (exif.get("state") or "").strip()
+                country = (exif.get("country") or "").strip()
 
                 location_parts = []
                 if "City" in IMAGE_LOCATION_FORMAT and city:
@@ -179,8 +155,6 @@ def fetch_album_assets():
                 if "Country" in IMAGE_LOCATION_FORMAT and country:
                     location_parts.append(country)
                 item["location"] = ", ".join(location_parts)
-
-                logger.debug("Asset %s: people=%s, location=%s", asset_id, item["people"], item["location"])
         except Exception as exc:
             logger.debug("Could not fetch details for asset %s: %s", asset_id, exc)
 
