@@ -28,6 +28,7 @@ services:
       - SHOW_PEOPLE_DESC=true
       - SHOW_ALBUM_NAME=true
       - SHOW_IMAGE_LOCATION=true
+      - LANGUAGE=pt
 
       # Style settings
       - PRIMARY_COLOR=#f5deb3

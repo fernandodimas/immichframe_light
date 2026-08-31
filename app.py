@@ -42,6 +42,7 @@ SHOW_IMAGE_DESC = os.environ.get("SHOW_IMAGE_DESC", "true").lower() in ("true", 
 SHOW_PEOPLE_DESC = os.environ.get("SHOW_PEOPLE_DESC", "true").lower() in ("true", "1", "yes")
 SHOW_ALBUM_NAME = os.environ.get("SHOW_ALBUM_NAME", "true").lower() in ("true", "1", "yes")
 SHOW_IMAGE_LOCATION = os.environ.get("SHOW_IMAGE_LOCATION", "true").lower() in ("true", "1", "yes")
+LANGUAGE = os.environ.get("LANGUAGE", "pt")
 
 # Style settings
 PRIMARY_COLOR = os.environ.get("PRIMARY_COLOR", "#f5deb3")
@@ -174,6 +175,7 @@ def api_slideshow():
         "secondaryColor": SECONDARY_COLOR,
         "style": STYLE,
         "baseFontSize": BASE_FONT_SIZE,
+        "language": LANGUAGE,
     }
     return jsonify({"assets": assets, "config": config})
 

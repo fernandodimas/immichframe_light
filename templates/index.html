@@ -2,13 +2,15 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, minimal-ui">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
     <meta name="apple-mobile-web-app-title" content="Immich Frame">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="application-name" content="Immich Frame">
     <meta name="theme-color" content="#000000">
+    <meta name="apple-touch-fullscreen" content="yes">
+    <meta name="full-screen" content="yes">
     <title>Immich Frame</title>
     <style>
         * {
@@ -286,10 +288,18 @@
             var d = new Date(dateStr);
             if (isNaN(d.getTime())) return "";
 
-            var daysPt = ["Domingo", "Segunda-feira", "Terca-feira", "Quarta-feira",
-                          "Quinta-feira", "Sexta-feira", "Sabado"];
-            var monthsPt = ["janeiro", "fevereiro", "marco", "abril", "maio", "junho",
-                            "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
+            var lang = config.language || "pt";
+            var days, months;
+            if (lang === "en") {
+                days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+                months = ["January", "February", "March", "April", "May", "June",
+                          "July", "August", "September", "October", "November", "December"];
+            } else {
+                days = ["Domingo", "Segunda-feira", "Terca-feira", "Quarta-feira",
+                        "Quinta-feira", "Sexta-feira", "Sabado"];
+                months = ["janeiro", "fevereiro", "marco", "abril", "maio", "junho",
+                          "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
+            }
 
             var day = d.getDate();
             var month = d.getMonth();
@@ -298,8 +308,8 @@
             var mins = d.getMinutes();
 
             var result = format;
-            result = result.replace("eeee", daysPt[d.getDay()]);
-            result = result.replace("MMMM", monthsPt[month]);
+            result = result.replace("eeee", days[d.getDay()]);
+            result = result.replace("MMMM", months[month]);
             result = result.replace("yyyy", year);
             result = result.replace("HH", hours < 10 ? "0" + hours : "" + hours);
             result = result.replace("mm", mins < 10 ? "0" + mins : "" + mins);
@@ -331,11 +341,21 @@
             if (clockEl) { clockEl.innerHTML = clockText; }
 
             if (clockDateEl) {
-                var daysPt = ["Domingo", "Segunda-feira", "Terca-feira", "Quarta-feira",
-                              "Quinta-feira", "Sexta-feira", "Sabado"];
-                var monthsPt = ["janeiro", "fevereiro", "marco", "abril", "maio", "junho",
-                                "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
-                clockDateEl.innerHTML = daysPt[now.getDay()] + ", " + now.getDate() + " de " + monthsPt[now.getMonth()];
+                var lang = config.language || "pt";
+                var days, months, de;
+                if (lang === "en") {
+                    days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+                    months = ["January", "February", "March", "April", "May", "June",
+                              "July", "August", "September", "October", "November", "December"];
+                    de = " of ";
+                } else {
+                    days = ["Domingo", "Segunda-feira", "Terca-feira", "Quarta-feira",
+                            "Quinta-feira", "Sexta-feira", "Sabado"];
+                    months = ["janeiro", "fevereiro", "marco", "abril", "maio", "junho",
+                              "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
+                    de = " de ";
+                }
+                clockDateEl.innerHTML = days[now.getDay()] + ", " + now.getDate() + de + months[now.getMonth()];
             }
         }
 
