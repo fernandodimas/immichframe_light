@@ -281,12 +281,44 @@
             return new Date(Date.now() + serverTimeOffset);
         }
 
+        function formatDate(dateStr, format) {
+            if (!dateStr) return "";
+            var d = new Date(dateStr);
+            if (isNaN(d.getTime())) return "";
+
+            var daysPt = ["Domingo", "Segunda-feira", "Terca-feira", "Quarta-feira",
+                          "Quinta-feira", "Sexta-feira", "Sabado"];
+            var monthsPt = ["janeiro", "fevereiro", "marco", "abril", "maio", "junho",
+                            "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
+
+            var day = d.getDate();
+            var month = d.getMonth();
+            var year = d.getFullYear();
+            var hours = d.getHours();
+            var mins = d.getMinutes();
+
+            var result = format;
+            result = result.replace("eeee", daysPt[d.getDay()]);
+            result = result.replace("MMMM", monthsPt[month]);
+            result = result.replace("yyyy", year);
+            result = result.replace("HH", hours < 10 ? "0" + hours : "" + hours);
+            result = result.replace("mm", mins < 10 ? "0" + mins : "" + mins);
+            result = result.replace(/\bd\b/, day);
+
+            result = result.replace(/'/g, "");
+
+            return result;
+        }
+
         function updateClock() {
             if (!config.showClock) {
-                clockEl.style.display = "none";
-                clockDateEl.style.display = "none";
+                if (clockEl) clockEl.style.display = "none";
+                if (clockDateEl) clockDateEl.style.display = "none";
                 return;
             }
+
+            if (clockEl) clockEl.style.display = "";
+            if (clockDateEl) clockDateEl.style.display = "";
 
             var now = getServerTime();
             var h = padZero(now.getHours());
