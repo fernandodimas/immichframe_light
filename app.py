@@ -305,7 +305,8 @@ def api_weather():
 
         unit_symbol = "°C" if UNIT_SYSTEM == "metric" else "°F"
 
-        icon_url = WEATHER_ICON_URL.replace("{IconId}", icon_code)
+        # Use local proxy URL for icon
+        icon_url = "/api/weather-icon/" + icon_code
 
         return jsonify({
             "enabled": True,
@@ -320,6 +321,28 @@ def api_weather():
     except requests.RequestException as exc:
         logger.error("Weather fetch error: %s", exc)
         return jsonify({"error": str(exc), "enabled": True})
+
+
+@app.route("/api/weather-icon/<icon_code>")
+def api_weather_icon(icon_code):
+    """Proxy endpoint to fetch weather icon from OpenWeatherMap."""
+    url = "https://openweathermap.org/img/wn/{}@2x.png".format(icon_code)
+
+    try:
+        resp = requests.get(url, timeout=10, stream=True)
+        if resp.status_code != 200:
+            return "Icon not found", 404
+
+        content_type = resp.headers.get("Content-Type", "image/png")
+        return Response(
+            resp.iter_content(chunk_size=4096),
+            content_type=content_type,
+            headers={"Cache-Control": "public, max-age=3600"},
+        )
+
+    except requests.RequestException as exc:
+        logger.error("Weather icon proxy error: %s", exc)
+        return "Proxy error", 502
 
 
 if __name__ == "__main__":
