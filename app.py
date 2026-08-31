@@ -80,6 +80,11 @@ SHOW_ALBUM_NAME = os.environ.get("SHOW_ALBUM_NAME", "true").lower() in ("true", 
 SHOW_IMAGE_LOCATION = os.environ.get("SHOW_IMAGE_LOCATION", "true").lower() in ("true", "1", "yes")
 LANGUAGE = os.environ.get("LANGUAGE", "pt")
 
+# Image effect settings
+IMAGE_ZOOM = os.environ.get("IMAGE_ZOOM", "true").lower() in ("true", "1", "yes")
+IMAGE_PAN = os.environ.get("IMAGE_PAN", "false").lower() in ("true", "1", "yes")
+IMAGE_FILL = os.environ.get("IMAGE_FILL", "false").lower() in ("true", "1", "yes")
+
 # Style settings
 PRIMARY_COLOR = os.environ.get("PRIMARY_COLOR", "#f5deb3")
 SECONDARY_COLOR = os.environ.get("SECONDARY_COLOR", "#000000")
@@ -231,6 +236,9 @@ def api_slideshow():
         "style": STYLE,
         "baseFontSize": BASE_FONT_SIZE,
         "language": LANGUAGE,
+        "imageZoom": IMAGE_ZOOM,
+        "imagePan": IMAGE_PAN,
+        "imageFill": IMAGE_FILL,
     }
     return jsonify({"assets": assets, "config": config})
 

@@ -54,6 +54,73 @@
             display: block;
         }
 
+        /* Image fill mode */
+        #current-image.fill {
+            object-fit: cover;
+        }
+
+        /* Ken Burns zoom effect */
+        @-webkit-keyframes zoomIn {
+            from { -webkit-transform: scale(1); transform: scale(1); }
+            to { -webkit-transform: scale(1.15); transform: scale(1.15); }
+        }
+
+        @-webkit-keyframes zoomOut {
+            from { -webkit-transform: scale(1.15); transform: scale(1.15); }
+            to { -webkit-transform: scale(1); transform: scale(1); }
+        }
+
+        #current-image.zoom-in {
+            -webkit-animation: zoomIn 20s ease-in-out infinite alternate;
+            animation: zoomIn 20s ease-in-out infinite alternate;
+        }
+
+        #current-image.zoom-out {
+            -webkit-animation: zoomOut 20s ease-in-out infinite alternate;
+            animation: zoomOut 20s ease-in-out infinite alternate;
+        }
+
+        /* Pan effect */
+        @-webkit-keyframes panLeft {
+            from { -webkit-transform: translate(0, 0); transform: translate(0, 0); }
+            to { -webkit-transform: translate(-3%, 0); transform: translate(-3%, 0); }
+        }
+
+        @-webkit-keyframes panRight {
+            from { -webkit-transform: translate(0, 0); transform: translate(0, 0); }
+            to { -webkit-transform: translate(3%, 0); transform: translate(3%, 0); }
+        }
+
+        @-webkit-keyframes panUp {
+            from { -webkit-transform: translate(0, 0); transform: translate(0, 0); }
+            to { -webkit-transform: translate(0, -3%); transform: translate(0, -3%); }
+        }
+
+        @-webkit-keyframes panDown {
+            from { -webkit-transform: translate(0, 0); transform: translate(0, 0); }
+            to { -webkit-transform: translate(0, 3%); transform: translate(0, 3%); }
+        }
+
+        #current-image.pan-left {
+            -webkit-animation: panLeft 20s ease-in-out infinite alternate;
+            animation: panLeft 20s ease-in-out infinite alternate;
+        }
+
+        #current-image.pan-right {
+            -webkit-animation: panRight 20s ease-in-out infinite alternate;
+            animation: panRight 20s ease-in-out infinite alternate;
+        }
+
+        #current-image.pan-up {
+            -webkit-animation: panUp 20s ease-in-out infinite alternate;
+            animation: panUp 20s ease-in-out infinite alternate;
+        }
+
+        #current-image.pan-down {
+            -webkit-animation: panDown 20s ease-in-out infinite alternate;
+            animation: panDown 20s ease-in-out infinite alternate;
+        }
+
         /* Navigation arrows */
         .nav-arrow {
             position: fixed;
@@ -592,7 +659,18 @@
             if (!imgEl) { return; }
 
             imgEl.onload = function () {
-                imgEl.className = "active";
+                var classes = ["active"];
+                if (config.imageFill) {
+                    classes.push("fill");
+                }
+                if (config.imageZoom) {
+                    classes.push(Math.random() > 0.5 ? "zoom-in" : "zoom-out");
+                }
+                if (config.imagePan) {
+                    var pans = ["pan-left", "pan-right", "pan-up", "pan-down"];
+                    classes.push(pans[Math.floor(Math.random() * pans.length)]);
+                }
+                imgEl.className = classes.join(" ");
                 isTransitioning = false;
                 updateInfo(asset);
                 startProgress();
