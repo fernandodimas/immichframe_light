@@ -8,17 +8,17 @@ services:
     ports:
       - "5000:5000"
     environment:
-      # Immich connection
+      # === REQUIRED ===
       - IMMICH_URL=http://192.168.16.250:2283
       - IMMICH_API_KEY=your_api_key_here
       - IMMICH_ALBUM_ID=your_album_uuid_here
 
-      # Slideshow settings
-      - INTERVAL_SECONDS=20
-      - TRANSITION_DURATION=2
-      - SHUFFLE=true
+      # === SLIDESHOW SETTINGS ===
+      - INTERVAL_SECONDS=20      # Time between photos (seconds)
+      - TRANSITION_DURATION=2     # Fade transition duration (seconds)
+      - SHUFFLE=true              # Randomize photo order
 
-      # Display settings
+      # === DISPLAY SETTINGS ===
       - SHOW_CLOCK=true
       - CLOCK_FORMAT=HH:mm
       - CLOCK_DATE_FORMAT=eeee, d 'de' MMMM 'de' yyyy
@@ -29,23 +29,22 @@ services:
       - SHOW_PEOPLE_DESC=true
       - SHOW_ALBUM_NAME=true
       - SHOW_IMAGE_LOCATION=true
-      - LANGUAGE=pt
+      - LANGUAGE=pt               # Options: pt, en, es, fr, de
 
-      # Image effect settings
-      - IMAGE_ZOOM=true
-      - IMAGE_PAN=false
-      - IMAGE_FILL=false
+      # === IMAGE EFFECTS ===
+      - IMAGE_ZOOM=true           # Ken Burns zoom effect
+      - IMAGE_PAN=false           # Pan animation
+      - IMAGE_FILL=false          # Fill space (may crop)
 
-      # Style settings
+      # === STYLE SETTINGS ===
       - PRIMARY_COLOR=#f5deb3
       - SECONDARY_COLOR=#000000
-      - STYLE=none
+      - STYLE=none                # Options: none, solid, transition, blur
       - BASE_FONT_SIZE=17px
       - IMAGE_LOCATION_FORMAT=City,State,Country
 
-      # Weather settings
-      - WEATHER_API_KEY=your_openweather_api_key
-      - UNIT_SYSTEM=metric
+      # === WEATHER SETTINGS ===
+      - WEATHER_API_KEY=          # Get free key at https://openweathermap.org/api
+      - UNIT_SYSTEM=metric        # Options: metric, imperial
       - WEATHER_LAT_LONG=40.730610,-73.935242
       - SHOW_WEATHER_DESCRIPTION=true
-      - WEATHER_ICON_URL=https://openweathermap.org/img/wn/{IconId}.png
