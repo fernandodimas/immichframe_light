@@ -7,7 +7,6 @@ optimized for iOS 9.3.5 Safari and other legacy browsers.
 
 import os
 import logging
-import json
 
 import requests
 from flask import Flask, render_template, jsonify
@@ -37,24 +36,30 @@ def fetch_album_assets():
         logger.warning("IMMICH_API_KEY or IMMICH_ALBUM_ID not configured")
         return []
 
-    url = "{}/api/albums/{}".format(IMMICH_URL, IMMICH_ALBUM_ID)
     headers = {"x-api-key": IMMICH_API_KEY}
 
-    logger.debug("Requesting: GET %s", url)
+    # Immich v3: /api/albums/{id} no longer returns assets.
+    # Use POST /api/search/metadata with albumIds filter instead.
+    search_url = "{}/api/search/metadata".format(IMMICH_URL)
+    payload = {
+        "albumIds": [IMMICH_ALBUM_ID],
+        "size": 1000,
+    }
+
+    logger.debug("Requesting: POST %s", search_url)
+    logger.debug("Payload: %s", payload)
 
     try:
-        resp = requests.get(url, headers=headers, timeout=15)
+        resp = requests.post(search_url, json=payload, headers=headers, timeout=30)
         logger.debug("Response status: %d", resp.status_code)
-        logger.debug("Response headers: %s", dict(resp.headers))
 
         if resp.status_code != 200:
             logger.error("Immich returned HTTP %d: %s", resp.status_code, resp.text[:500])
             return []
 
         data = resp.json()
-        logger.debug("Full API response keys: %s", list(data.keys()))
-        logger.debug("Album name: %s", data.get("albumName", "N/A"))
-        logger.debug("Asset count in response: %s", data.get("assetCount", "N/A"))
+        assets = data.get("assets", {}).get("items", [])
+        logger.debug("Found %d assets via search API", len(assets))
 
     except requests.RequestException as exc:
         logger.error("Failed to fetch album from Immich: %s", exc)
@@ -63,9 +68,8 @@ def fetch_album_assets():
         logger.error("Invalid JSON response from Immich API")
         return []
 
-    assets = data.get("assets", [])
     if not assets:
-        logger.warning("Album '%s' has no assets. Full response: %s", IMMICH_ALBUM_ID, json.dumps(data, indent=2)[:1000])
+        logger.warning("Album '%s' has no assets", IMMICH_ALBUM_ID)
         return []
 
     thumbnails = []
@@ -113,13 +117,28 @@ def api_debug():
         result["error"] = "Missing API key or album ID"
         return jsonify(result)
 
-    url = "{}/api/albums/{}".format(IMMICH_URL, IMMICH_ALBUM_ID)
     headers = {"x-api-key": IMMICH_API_KEY}
 
+    # Test search/metadata endpoint
+    search_url = "{}/api/search/metadata".format(IMMICH_URL)
+    payload = {
+        "albumIds": [IMMICH_ALBUM_ID],
+        "size": 10,
+    }
+
     try:
-        resp = requests.get(url, headers=headers, timeout=15)
-        result["status_code"] = resp.status_code
-        result["response"] = resp.json()
+        resp = requests.post(search_url, json=payload, headers=headers, timeout=15)
+        result["search_status"] = resp.status_code
+        if resp.status_code == 200:
+            data = resp.json()
+            assets = data.get("assets", {}).get("items", [])
+            result["assets_found"] = len(assets)
+            result["assets_sample"] = [
+                {"id": a.get("id"), "originalFileName": a.get("originalFileName")}
+                for a in assets[:5]
+            ]
+        else:
+            result["search_error"] = resp.text[:500]
     except Exception as exc:
         result["error"] = str(exc)
 
