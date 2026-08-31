@@ -714,6 +714,28 @@
             return "/api/thumbnail/" + assetId;
         }
 
+        function fetchAssetDetails(assetId, callback) {
+            var xhr = new XMLHttpRequest();
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState === 4) {
+                    if (xhr.status === 200) {
+                        try {
+                            var data = JSON.parse(xhr.responseText);
+                            callback(null, data);
+                        } catch (e) {
+                            callback("parse error");
+                        }
+                    } else {
+                        callback("http error");
+                    }
+                }
+            };
+            xhr.onerror = function () { callback("network error"); };
+            xhr.open("GET", "/api/asset/" + assetId + "/details", true);
+            xhr.timeout = 10000;
+            xhr.send(null);
+        }
+
         function showImage(url, asset) {
             if (!imgEl) { return; }
 
@@ -733,6 +755,21 @@
                 isTransitioning = false;
                 updateInfo(asset);
                 startProgress();
+
+                // Fetch detailed info on demand (people, location)
+                if (asset.id) {
+                    fetchAssetDetails(asset.id, function (err, details) {
+                        if (!err && details) {
+                            if (details.people && details.people.length > 0) {
+                                asset.people = details.people;
+                            }
+                            if (details.location) {
+                                asset.location = details.location;
+                            }
+                            updateInfo(asset);
+                        }
+                    });
+                }
             };
 
             imgEl.onerror = function () {

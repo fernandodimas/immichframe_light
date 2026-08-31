@@ -281,6 +281,50 @@ def api_thumbnail(asset_id):
         return "Proxy error", 502
 
 
+@app.route("/api/asset/<asset_id>/details")
+def api_asset_details(asset_id):
+    """Fetch detailed asset info (people, location) on demand."""
+    if not IMMICH_API_KEY:
+        return jsonify({"error": "No API key"}), 401
+
+    headers = {"x-api-key": IMMICH_API_KEY}
+    detail_url = "{}/api/assets/{}".format(IMMICH_URL, asset_id)
+
+    try:
+        resp = requests.get(detail_url, headers=headers, timeout=10)
+        if resp.status_code != 200:
+            return jsonify({"error": "Not found"}), 404
+
+        detail = resp.json()
+
+        # Extract people names
+        people = detail.get("people", [])
+        people_names = [p.get("name", "").strip() for p in people if p.get("name")]
+
+        # Extract location from exifInfo
+        exif = detail.get("exifInfo", {}) or {}
+        city = (exif.get("city") or "").strip()
+        state = (exif.get("state") or "").strip()
+        country = (exif.get("country") or "").strip()
+
+        location_parts = []
+        if "City" in IMAGE_LOCATION_FORMAT and city:
+            location_parts.append(city)
+        if "State" in IMAGE_LOCATION_FORMAT and state:
+            location_parts.append(state)
+        if "Country" in IMAGE_LOCATION_FORMAT and country:
+            location_parts.append(country)
+
+        return jsonify({
+            "people": people_names,
+            "location": ", ".join(location_parts),
+        })
+
+    except requests.RequestException as exc:
+        logger.debug("Asset details error: %s", exc)
+        return jsonify({"people": [], "location": ""})
+
+
 @app.route("/api/debug")
 def api_debug():
     """Debug endpoint to check Immich connection."""
