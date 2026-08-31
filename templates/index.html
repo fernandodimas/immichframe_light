@@ -163,7 +163,7 @@
             display: flex;
         }
 
-        #weather-icon {
+        #weather-icon-wrap {
             width: 40px;
             height: 40px;
             margin-right: 10px;
@@ -171,19 +171,26 @@
             flex-shrink: 0;
         }
 
+        #weather-icon {
+            width: 40px;
+            height: 40px;
+            display: block;
+        }
+
+        #weather-info {
+            -webkit-flex: 1;
+            flex: 1;
+        }
+
         #weather-temp {
             font-size: 20px;
             font-weight: 300;
         }
 
-        #weather-city {
-            font-size: 14px;
-            opacity: 0.9;
-        }
-
         #weather-desc {
             font-size: 14px;
             opacity: 0.8;
+            margin-top: 2px;
         }
 
         /* Bottom right - Photo info */
@@ -292,10 +299,9 @@
         <div id="clock"></div>
         <div id="clock-date"></div>
         <div id="weather">
-            <img id="weather-icon" src="" alt="">
-            <div>
+            <div id="weather-icon-wrap"><img id="weather-icon"></div>
+            <div id="weather-info">
                 <div id="weather-temp"></div>
-                <div id="weather-city"></div>
                 <div id="weather-desc"></div>
             </div>
         </div>
@@ -372,7 +378,6 @@
             var weatherEl = document.getElementById("weather");
             var weatherIcon = document.getElementById("weather-icon");
             var weatherTemp = document.getElementById("weather-temp");
-            var weatherCity = document.getElementById("weather-city");
             var weatherDesc = document.getElementById("weather-desc");
 
             var xhr = new XMLHttpRequest();
@@ -383,7 +388,6 @@
                             var data = JSON.parse(xhr.responseText);
                             if (data.enabled && !data.error) {
                                 weatherIcon.src = data.iconUrl;
-                                weatherIcon.alt = data.description;
                                 weatherTemp.innerHTML = data.city + ", " + data.temp + data.unit;
                                 if (data.description) {
                                     weatherDesc.innerHTML = data.description;
@@ -416,14 +420,13 @@
             var lang = config.language || "pt";
             var days, months;
             if (lang === "en") {
-                days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-                months = ["January", "February", "March", "April", "May", "June",
-                          "July", "August", "September", "October", "November", "December"];
+                days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+                months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                          "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
             } else {
-                days = ["Domingo", "Segunda-feira", "Terca-feira", "Quarta-feira",
-                        "Quinta-feira", "Sexta-feira", "Sabado"];
-                months = ["janeiro", "fevereiro", "marco", "abril", "maio", "junho",
-                          "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
+                days = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sab"];
+                months = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun",
+                          "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
             }
 
             var day = d.getDate();
@@ -467,16 +470,15 @@
                 var lang = config.language || "pt";
                 var days, months, de;
                 if (lang === "en") {
-                    days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-                    months = ["January", "February", "March", "April", "May", "June",
-                              "July", "August", "September", "October", "November", "December"];
-                    de = " of ";
+                    days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+                    months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                              "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                    de = " ";
                 } else {
-                    days = ["Domingo", "Segunda-feira", "Terca-feira", "Quarta-feira",
-                            "Quinta-feira", "Sexta-feira", "Sabado"];
-                    months = ["janeiro", "fevereiro", "marco", "abril", "maio", "junho",
-                              "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
-                    de = " de ";
+                    days = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sab"];
+                    months = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun",
+                              "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+                    de = " ";
                 }
                 clockDateEl.innerHTML = days[now.getDay()] + ", " + now.getDate() + de + months[now.getMonth()];
             }
