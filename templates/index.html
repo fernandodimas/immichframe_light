@@ -62,63 +62,63 @@
         /* Ken Burns zoom effect */
         @-webkit-keyframes zoomIn {
             from { -webkit-transform: scale(1); transform: scale(1); }
-            to { -webkit-transform: scale(1.15); transform: scale(1.15); }
+            to { -webkit-transform: scale(1.08); transform: scale(1.08); }
         }
 
         @-webkit-keyframes zoomOut {
-            from { -webkit-transform: scale(1.15); transform: scale(1.15); }
+            from { -webkit-transform: scale(1.08); transform: scale(1.08); }
             to { -webkit-transform: scale(1); transform: scale(1); }
         }
 
         #current-image.zoom-in {
-            -webkit-animation: zoomIn 20s ease-in-out infinite alternate;
-            animation: zoomIn 20s ease-in-out infinite alternate;
+            -webkit-animation: zoomIn 25s ease-in-out infinite alternate;
+            animation: zoomIn 25s ease-in-out infinite alternate;
         }
 
         #current-image.zoom-out {
-            -webkit-animation: zoomOut 20s ease-in-out infinite alternate;
-            animation: zoomOut 20s ease-in-out infinite alternate;
+            -webkit-animation: zoomOut 25s ease-in-out infinite alternate;
+            animation: zoomOut 25s ease-in-out infinite alternate;
         }
 
         /* Pan effect */
         @-webkit-keyframes panLeft {
             from { -webkit-transform: translate(0, 0); transform: translate(0, 0); }
-            to { -webkit-transform: translate(-3%, 0); transform: translate(-3%, 0); }
+            to { -webkit-transform: translate(-2%, 0); transform: translate(-2%, 0); }
         }
 
         @-webkit-keyframes panRight {
             from { -webkit-transform: translate(0, 0); transform: translate(0, 0); }
-            to { -webkit-transform: translate(3%, 0); transform: translate(3%, 0); }
+            to { -webkit-transform: translate(2%, 0); transform: translate(2%, 0); }
         }
 
         @-webkit-keyframes panUp {
             from { -webkit-transform: translate(0, 0); transform: translate(0, 0); }
-            to { -webkit-transform: translate(0, -3%); transform: translate(0, -3%); }
+            to { -webkit-transform: translate(0, -2%); transform: translate(0, -2%); }
         }
 
         @-webkit-keyframes panDown {
             from { -webkit-transform: translate(0, 0); transform: translate(0, 0); }
-            to { -webkit-transform: translate(0, 3%); transform: translate(0, 3%); }
+            to { -webkit-transform: translate(0, 2%); transform: translate(0, 2%); }
         }
 
         #current-image.pan-left {
-            -webkit-animation: panLeft 20s ease-in-out infinite alternate;
-            animation: panLeft 20s ease-in-out infinite alternate;
+            -webkit-animation: panLeft 25s ease-in-out infinite alternate;
+            animation: panLeft 25s ease-in-out infinite alternate;
         }
 
         #current-image.pan-right {
-            -webkit-animation: panRight 20s ease-in-out infinite alternate;
-            animation: panRight 20s ease-in-out infinite alternate;
+            -webkit-animation: panRight 25s ease-in-out infinite alternate;
+            animation: panRight 25s ease-in-out infinite alternate;
         }
 
         #current-image.pan-up {
-            -webkit-animation: panUp 20s ease-in-out infinite alternate;
-            animation: panUp 20s ease-in-out infinite alternate;
+            -webkit-animation: panUp 25s ease-in-out infinite alternate;
+            animation: panUp 25s ease-in-out infinite alternate;
         }
 
         #current-image.pan-down {
-            -webkit-animation: panDown 20s ease-in-out infinite alternate;
-            animation: panDown 20s ease-in-out infinite alternate;
+            -webkit-animation: panDown 25s ease-in-out infinite alternate;
+            animation: panDown 25s ease-in-out infinite alternate;
         }
 
         /* Navigation arrows */
@@ -684,13 +684,31 @@
             imgEl.src = url;
         }
 
+        var preloader = null;
+        var preloaderTimeout = null;
+
         function preloadAndShow(url, asset) {
-            var preloader = new Image();
+            if (preloader) {
+                preloader.onload = null;
+                preloader.onerror = null;
+                preloader.src = "";
+                preloader = null;
+            }
+            if (preloaderTimeout) {
+                clearTimeout(preloaderTimeout);
+                preloaderTimeout = null;
+            }
+
+            preloader = new Image();
             var done = false;
 
             function onDone(success) {
                 if (done) { return; }
                 done = true;
+                if (preloaderTimeout) {
+                    clearTimeout(preloaderTimeout);
+                    preloaderTimeout = null;
+                }
                 if (success) {
                     showImage(url, asset);
                 } else {
@@ -704,7 +722,7 @@
 
             preloader.src = url;
 
-            window.setTimeout(function () {
+            preloaderTimeout = window.setTimeout(function () {
                 if (!done) { onDone(false); }
             }, 15000);
         }
