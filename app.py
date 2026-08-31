@@ -95,6 +95,18 @@ def fetch_album_assets():
         logger.warning("Album '%s' has no assets", IMMICH_ALBUM_ID)
         return []
 
+    # Get album name first
+    album_name = ""
+    try:
+        album_url = "{}/api/albums/{}".format(IMMICH_URL, IMMICH_ALBUM_ID)
+        album_resp = requests.get(album_url, headers=headers, timeout=15)
+        if album_resp.status_code == 200:
+            album_data = album_resp.json()
+            album_name = album_data.get("albumName", "")
+    except Exception as exc:
+        logger.debug("Could not fetch album name: %s", exc)
+
+    # Fetch full details for each asset to get people and location
     result = []
     for asset in assets:
         asset_id = asset.get("id")
@@ -107,40 +119,39 @@ def fetch_album_assets():
             "description": asset.get("description", ""),
             "people": [],
             "location": "",
-            "albumName": "",
+            "albumName": album_name,
         }
 
-        # Extract people names
-        people = asset.get("people", [])
-        if people:
-            item["people"] = [p.get("name", "") for p in people if p.get("name")]
+        # Try to get full asset details including people and location
+        try:
+            detail_url = "{}/api/assets/{}".format(IMMICH_URL, asset_id)
+            detail_resp = requests.get(detail_url, headers=headers, timeout=10)
+            if detail_resp.status_code == 200:
+                detail = detail_resp.json()
 
-        # Extract location
-        city = asset.get("city", "")
-        state = asset.get("state", "")
-        country = asset.get("country", "")
-        location_parts = []
-        if "City" in IMAGE_LOCATION_FORMAT and city:
-            location_parts.append(city)
-        if "State" in IMAGE_LOCATION_FORMAT and state:
-            location_parts.append(state)
-        if "Country" in IMAGE_LOCATION_FORMAT and country:
-            location_parts.append(country)
-        item["location"] = ", ".join(location_parts)
+                # Extract people names
+                people = detail.get("people", [])
+                if people:
+                    item["people"] = [p.get("name", "") for p in people if p.get("name")]
+
+                # Extract location
+                city = detail.get("city", "")
+                state = detail.get("state", "")
+                country = detail.get("country", "")
+                location_parts = []
+                if "City" in IMAGE_LOCATION_FORMAT and city:
+                    location_parts.append(city)
+                if "State" in IMAGE_LOCATION_FORMAT and state:
+                    location_parts.append(state)
+                if "Country" in IMAGE_LOCATION_FORMAT and country:
+                    location_parts.append(country)
+                item["location"] = ", ".join(location_parts)
+
+                logger.debug("Asset %s: people=%s, location=%s", asset_id, item["people"], item["location"])
+        except Exception as exc:
+            logger.debug("Could not fetch details for asset %s: %s", asset_id, exc)
 
         result.append(item)
-
-    # Get album name
-    try:
-        album_url = "{}/api/albums/{}".format(IMMICH_URL, IMMICH_ALBUM_ID)
-        album_resp = requests.get(album_url, headers=headers, timeout=15)
-        if album_resp.status_code == 200:
-            album_data = album_resp.json()
-            album_name = album_data.get("albumName", "")
-            for item in result:
-                item["albumName"] = album_name
-    except Exception as exc:
-        logger.debug("Could not fetch album name: %s", exc)
 
     if SHUFFLE:
         random.shuffle(result)
