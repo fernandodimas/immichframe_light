@@ -172,7 +172,7 @@ def fetch_album_assets():
     except Exception as exc:
         logger.debug("Could not fetch album name: %s", exc)
 
-    # Fetch full details for each asset to get people and location
+    # Build result from search data - no individual API calls
     result = []
     for asset in assets:
         asset_id = asset.get("id")
@@ -188,34 +188,21 @@ def fetch_album_assets():
             "albumName": album_name,
         }
 
-        # Try to get full asset details including people and location
-        try:
-            detail_url = "{}/api/assets/{}".format(IMMICH_URL, asset_id)
-            detail_resp = requests.get(detail_url, headers=headers, timeout=10)
-            if detail_resp.status_code == 200:
-                detail = detail_resp.json()
+        # Extract location from exifInfo if available in search result
+        exif = asset.get("exifInfo", {}) or {}
+        if exif:
+            city = (exif.get("city") or "").strip()
+            state = (exif.get("state") or "").strip()
+            country = (exif.get("country") or "").strip()
 
-                # Extract people names
-                people = detail.get("people", [])
-                if people:
-                    item["people"] = [p.get("name", "").strip() for p in people if p.get("name")]
-
-                # Extract location from exifInfo
-                exif = detail.get("exifInfo", {}) or {}
-                city = (exif.get("city") or "").strip()
-                state = (exif.get("state") or "").strip()
-                country = (exif.get("country") or "").strip()
-
-                location_parts = []
-                if "City" in IMAGE_LOCATION_FORMAT and city:
-                    location_parts.append(city)
-                if "State" in IMAGE_LOCATION_FORMAT and state:
-                    location_parts.append(state)
-                if "Country" in IMAGE_LOCATION_FORMAT and country:
-                    location_parts.append(country)
-                item["location"] = ", ".join(location_parts)
-        except Exception as exc:
-            logger.debug("Could not fetch details for asset %s: %s", asset_id, exc)
+            location_parts = []
+            if "City" in IMAGE_LOCATION_FORMAT and city:
+                location_parts.append(city)
+            if "State" in IMAGE_LOCATION_FORMAT and state:
+                location_parts.append(state)
+            if "Country" in IMAGE_LOCATION_FORMAT and country:
+                location_parts.append(country)
+            item["location"] = ", ".join(location_parts)
 
         result.append(item)
 
