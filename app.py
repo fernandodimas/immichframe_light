@@ -89,13 +89,14 @@ def fetch_album_assets():
 @app.route("/")
 def index():
     """Serve the main slideshow page."""
+    return render_template("index.html", interval=INTERVAL_SECONDS)
+
+
+@app.route("/api/slideshow")
+def api_slideshow():
+    """API endpoint to get slideshow data for JavaScript."""
     thumbnails = fetch_album_assets()
-    thumbnails_json = json.dumps(thumbnails)
-    return render_template(
-        "index.html",
-        thumbnails_json=thumbnails_json,
-        interval=INTERVAL_SECONDS,
-    )
+    return jsonify({"thumbnails": thumbnails, "interval": INTERVAL_SECONDS})
 
 
 @app.route("/api/thumbnails")

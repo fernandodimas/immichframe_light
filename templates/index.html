@@ -119,7 +119,7 @@
     </style>
 </head>
 <body>
-    <div id="slideshow" data-thumbnails='{{ thumbnails_json|safe }}' data-interval="{{ interval }}">
+    <div id="slideshow">
         <img id="current-image" alt="" draggable="false">
     </div>
 
@@ -141,9 +141,20 @@
         var errorEl = document.getElementById("error-message");
         var statusBar = document.getElementById("status-bar");
 
+        var thumbnails = [];
+        var intervalSec = 15;
+        var currentIndex = 0;
+        var isTransitioning = false;
+
         function log(msg) {
             if (window.console && console.log) {
                 console.log("[Frame] " + msg);
+            }
+        }
+
+        function logError(msg) {
+            if (window.console && console.error) {
+                console.error("[Frame] " + msg);
             }
         }
 
@@ -172,8 +183,13 @@
             window.setInterval(updateClock, 1000);
         }
 
-        function showError() {
-            if (errorEl) { errorEl.className = "visible"; }
+        function showError(msg) {
+            if (errorEl) {
+                if (msg) {
+                    errorEl.innerHTML = "<p>" + msg + "</p>";
+                }
+                errorEl.className = "visible";
+            }
             if (loadingEl) { loadingEl.style.display = "none"; }
         }
 
@@ -181,21 +197,31 @@
             if (loadingEl) { loadingEl.style.display = "none"; }
         }
 
-        var thumbnails = [];
-        var intervalSec = 15;
-        var currentIndex = 0;
-        var isTransitioning = false;
-        var timerId = null;
-
-        function parseThumbnails(raw) {
-            if (!raw) { return []; }
-            if (typeof raw === "object") { return raw; }
-            try {
-                return JSON.parse(raw);
-            } catch (e) {
-                log("Failed to parse thumbnails JSON");
-                return [];
-            }
+        function fetchJSON(url, callback) {
+            var xhr = new XMLHttpRequest();
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState === 4) {
+                    if (xhr.status === 200) {
+                        try {
+                            var data = JSON.parse(xhr.responseText);
+                            callback(null, data);
+                        } catch (e) {
+                            callback("JSON parse error");
+                        }
+                    } else {
+                        callback("HTTP " + xhr.status);
+                    }
+                }
+            };
+            xhr.onerror = function () {
+                callback("Network error");
+            };
+            xhr.ontimeout = function () {
+                callback("Timeout");
+            };
+            xhr.open("GET", url, true);
+            xhr.timeout = 15000;
+            xhr.send(null);
         }
 
         function showImage(url) {
@@ -211,7 +237,7 @@
             };
 
             imgEl.onerror = function () {
-                log("Error: " + url);
+                logError("Image load error: " + url);
                 isTransitioning = false;
                 advanceToNext();
             };
@@ -241,7 +267,7 @@
 
             window.setTimeout(function () {
                 if (!done) {
-                    log("Timeout: " + url);
+                    log("Timeout loading: " + url);
                     onDone(false);
                 }
             }, 15000);
@@ -249,7 +275,7 @@
 
         function advanceToNext() {
             if (thumbnails.length === 0) {
-                showError();
+                showError("No images available");
                 return;
             }
 
@@ -262,8 +288,8 @@
 
         function startSlideshow() {
             if (thumbnails.length === 0) {
-                log("No images");
-                showError();
+                log("No images loaded");
+                showError("No images found");
                 return;
             }
 
@@ -271,22 +297,34 @@
             isTransitioning = true;
             preloadAndShow(thumbnails[0]);
 
-            timerId = window.setInterval(function () {
+            window.setInterval(function () {
                 advanceToNext();
             }, intervalSec * 1000);
         }
 
         function init() {
             startClock();
+            log("Fetching slideshow data...");
 
-            var rawData = document.getElementById("slideshow").getAttribute("data-thumbnails");
-            var rawInterval = document.getElementById("slideshow").getAttribute("data-interval");
+            fetchJSON("/api/slideshow", function (err, data) {
+                if (err) {
+                    logError("Failed to fetch data: " + err);
+                    showError("Failed to load: " + err);
+                    return;
+                }
 
-            thumbnails = parseThumbnails(rawData);
-            intervalSec = parseInt(rawInterval, 10) || 15;
+                thumbnails = data.thumbnails || [];
+                intervalSec = data.interval || 15;
 
-            log("Images: " + thumbnails.length + ", Interval: " + intervalSec + "s");
-            startSlideshow();
+                log("Loaded " + thumbnails.length + " images, interval: " + intervalSec + "s");
+
+                if (thumbnails.length === 0) {
+                    showError("No images in album");
+                    return;
+                }
+
+                startSlideshow();
+            });
         }
 
         if (document.readyState === "complete" || document.readyState === "interactive") {
