@@ -31,6 +31,11 @@ services:
       - SHOW_IMAGE_LOCATION=true
       - LANGUAGE=pt
 
+      # Image effect settings
+      - IMAGE_ZOOM=true
+      - IMAGE_PAN=false
+      - IMAGE_FILL=false
+
       # Style settings
       - PRIMARY_COLOR=#f5deb3
       - SECONDARY_COLOR=#000000
