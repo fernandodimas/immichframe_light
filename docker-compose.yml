@@ -48,3 +48,8 @@ services:
       - UNIT_SYSTEM=metric        # Options: metric, imperial
       - WEATHER_LAT_LONG=40.730610,-73.935242
       - SHOW_WEATHER_DESCRIPTION=true
+
+      # === NIGHT MODE ===
+      - NIGHT_MODE=false          # Enable night mode (black screen)
+      - NIGHT_MODE_START=22:00    # Start time (HH:mm)
+      - NIGHT_MODE_END=07:00      # End time (HH:mm)

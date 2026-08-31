@@ -78,6 +78,11 @@ services:
       - UNIT_SYSTEM=metric
       - WEATHER_LAT_LONG=40.730610,-73.935242
       - SHOW_WEATHER_DESCRIPTION=true
+
+      # Night mode
+      - NIGHT_MODE=false
+      - NIGHT_MODE_START=22:00
+      - NIGHT_MODE_END=07:00
 ```
 
 ## Portainer Setup
@@ -147,6 +152,14 @@ services:
 | `UNIT_SYSTEM` | Temperature unit | `metric` |
 | `WEATHER_LAT_LONG` | Weather location (lat,lon) | `40.730610,-73.935242` |
 | `SHOW_WEATHER_DESCRIPTION` | Display weather description | `true` |
+
+### Night Mode
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `NIGHT_MODE` | Enable night mode (black screen) | `false` |
+| `NIGHT_MODE_START` | Start time (HH:mm) | `22:00` |
+| `NIGHT_MODE_END` | End time (HH:mm) | `07:00` |
 
 ## Finding your Album UUID
 

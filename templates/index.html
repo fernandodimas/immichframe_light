@@ -338,6 +338,22 @@
             opacity: 0.01;
             z-index: -1;
         }
+
+        /* Night mode overlay */
+        #night-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #000;
+            z-index: 9999;
+            display: none;
+        }
+
+        #night-overlay.active {
+            display: block;
+        }
     </style>
 </head>
 <body>
@@ -345,6 +361,9 @@
     <video id="keep-awake" loop muted playsinline>
         <source src="data:video/mp4;base64,AAAAIGZ0eXBpc29tAAACAGlzb21pc28yYXZjMW1wNDEAAAAIZnJlZQAAAAhtZGF0AAAA1m1vb3YAAABsbXZoZAAAAAAAAAAAAAAAAAAAA+gAAAAAAAEAAAEAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIAAABidWR0YQAAAFptZGF0AAAAO91tbHVjAAAAAAAAABEAAAMAAAAsAAAAFHNtaGQAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAQAAAAEAAAEAAAAAAAwAAAABgJJRHZkb3ZtZGFyAAACMgYVVMRvQiEz/8AAAD/AAAAZx1mLBxtdmhkAAAAAAAAAAAAAAAAAAAAPAAAAD8AAQAAAQAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAACFpb2RzAAAAABCAgIAHFP///v7/AAAAAAJNdHJhawAAAFx0a2hkAAAAA91tbHVjAAAAAAAAABEAAAMAAAAsAAAAAWFtZGF0AAAAAREAAQAoAAEABQoQaZLWiFBEAAAFhAAAAAAAABRkbWRpYQAAACBkcmVmAAAAAAAAAAEAAAAMdXJsIAAAAAEAAAETc3RibAAAAGdzdHNkAAAAAAAAAAEAAABXbXA0YQAAAAAAAAABAAAAAAAAAAAAAgAQAAAAAACnAAAAAAAAACNlc2RzAAAAAAOfgICAFUAVAAAD6gAAAARtdmhkAAAAAAAAAAAAAAAAAAC8AAAAAAEAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQag==" type="video/mp4">
     </video>
+
+    <!-- Night mode overlay -->
+    <div id="night-overlay"></div>
 
     <!-- Navigation arrows -->
     <div id="nav-prev" class="nav-arrow" onclick="prevImage()">
@@ -407,6 +426,7 @@
         var infoDate = document.getElementById("info-date");
         var navPrev = document.getElementById("nav-prev");
         var navNext = document.getElementById("nav-next");
+        var nightOverlay = document.getElementById("night-overlay");
 
         var assets = [];
         var config = {};
@@ -416,9 +436,48 @@
         var progressWidth = 0;
         var slideInterval = null;
         var serverTimeOffset = 0;
+        var nightModeInterval = null;
 
         function padZero(n) {
             return n < 10 ? "0" + n : "" + n;
+        }
+
+        function isNightMode() {
+            if (!config.nightMode) return false;
+
+            var now = getServerTime();
+            var currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+            var startParts = (config.nightModeStart || "22:00").split(":");
+            var startMinutes = parseInt(startParts[0], 10) * 60 + parseInt(startParts[1], 10);
+
+            var endParts = (config.nightModeEnd || "07:00").split(":");
+            var endMinutes = parseInt(endParts[0], 10) * 60 + parseInt(endParts[1], 10);
+
+            if (startMinutes > endMinutes) {
+                return currentMinutes >= startMinutes || currentMinutes < endMinutes;
+            } else {
+                return currentMinutes >= startMinutes && currentMinutes < endMinutes;
+            }
+        }
+
+        function updateNightMode() {
+            if (isNightMode()) {
+                nightOverlay.className = "active";
+                stopProgress();
+                if (slideInterval) {
+                    window.clearInterval(slideInterval);
+                    slideInterval = null;
+                }
+            } else {
+                nightOverlay.className = "";
+                if (!slideInterval && assets.length > 0) {
+                    slideInterval = window.setInterval(function () {
+                        advanceToNext();
+                    }, (config.interval || 20) * 1000);
+                    startProgress();
+                }
+            }
         }
 
         function fetchServerTime() {
@@ -798,6 +857,8 @@
             updateClock();
             window.setInterval(updateClock, 1000);
 
+            nightModeInterval = window.setInterval(updateNightMode, 30000);
+
             var hideTimer;
             function showNav() {
                 navPrev.style.opacity = "0.5";
@@ -819,7 +880,10 @@
                 config = data.config || {};
 
                 applyConfig();
-                startSlideshow();
+                updateNightMode();
+                if (!isNightMode()) {
+                    startSlideshow();
+                }
             });
         }
 

@@ -99,6 +99,11 @@ WEATHER_LAT_LONG = os.environ.get("WEATHER_LAT_LONG", "40.730610,-73.935242")
 SHOW_WEATHER_DESCRIPTION = os.environ.get("SHOW_WEATHER_DESCRIPTION", "true").lower() in ("true", "1", "yes")
 WEATHER_ICON_URL = os.environ.get("WEATHER_ICON_URL", "https://openweathermap.org/img/wn/{IconId}.png")
 
+# Night mode settings
+NIGHT_MODE = os.environ.get("NIGHT_MODE", "false").lower() in ("true", "1", "yes")
+NIGHT_MODE_START = os.environ.get("NIGHT_MODE_START", "22:00")
+NIGHT_MODE_END = os.environ.get("NIGHT_MODE_END", "07:00")
+
 logger.info("IMMICH_URL: %s", IMMICH_URL)
 logger.info("IMMICH_ALBUM_ID: %s", IMMICH_ALBUM_ID or "NOT SET")
 logger.info("INTERVAL: %ds, TRANSITION: %.1fs, SHUFFLE: %s", INTERVAL_SECONDS, TRANSITION_DURATION, SHUFFLE)
@@ -239,6 +244,9 @@ def api_slideshow():
         "imageZoom": IMAGE_ZOOM,
         "imagePan": IMAGE_PAN,
         "imageFill": IMAGE_FILL,
+        "nightMode": NIGHT_MODE,
+        "nightModeStart": NIGHT_MODE_START,
+        "nightModeEnd": NIGHT_MODE_END,
     }
     return jsonify({"assets": assets, "config": config})
 
