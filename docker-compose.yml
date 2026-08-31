@@ -37,3 +37,10 @@ services:
       - STYLE=none
       - BASE_FONT_SIZE=17px
       - IMAGE_LOCATION_FORMAT=City,State,Country
+
+      # Weather settings
+      - WEATHER_API_KEY=your_openweather_api_key
+      - UNIT_SYSTEM=metric
+      - WEATHER_LAT_LONG=40.730610,-73.935242
+      - SHOW_WEATHER_DESCRIPTION=true
+      - WEATHER_ICON_URL=https://openweathermap.org/img/wn/{IconId}.png

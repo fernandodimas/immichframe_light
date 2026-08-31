@@ -52,6 +52,13 @@ STYLE = os.environ.get("STYLE", "none")
 BASE_FONT_SIZE = os.environ.get("BASE_FONT_SIZE", "17px")
 IMAGE_LOCATION_FORMAT = os.environ.get("IMAGE_LOCATION_FORMAT", "City,State,Country")
 
+# Weather settings
+WEATHER_API_KEY = os.environ.get("WEATHER_API_KEY", "")
+UNIT_SYSTEM = os.environ.get("UNIT_SYSTEM", "metric")
+WEATHER_LAT_LONG = os.environ.get("WEATHER_LAT_LONG", "40.730610,-73.935242")
+SHOW_WEATHER_DESCRIPTION = os.environ.get("SHOW_WEATHER_DESCRIPTION", "true").lower() in ("true", "1", "yes")
+WEATHER_ICON_URL = os.environ.get("WEATHER_ICON_URL", "https://openweathermap.org/img/wn/{IconId}.png")
+
 logger.info("IMMICH_URL: %s", IMMICH_URL)
 logger.info("IMMICH_ALBUM_ID: %s", IMMICH_ALBUM_ID or "NOT SET")
 logger.info("INTERVAL: %ds, TRANSITION: %.1fs, SHUFFLE: %s", INTERVAL_SECONDS, TRANSITION_DURATION, SHUFFLE)
@@ -258,6 +265,57 @@ def api_time():
         "year": now.year,
         "weekday": now.weekday(),
     })
+
+
+@app.route("/api/weather")
+def api_weather():
+    """Fetch weather data from OpenWeatherMap API."""
+    if not WEATHER_API_KEY:
+        return jsonify({"error": "No API key configured", "enabled": False})
+
+    try:
+        lat, lon = WEATHER_LAT_LONG.split(",")
+    except ValueError:
+        return jsonify({"error": "Invalid coordinates", "enabled": False})
+
+    url = "https://api.openweathermap.org/data/2.5/weather"
+    params = {
+        "lat": lat.strip(),
+        "lon": lon.strip(),
+        "appid": WEATHER_API_KEY,
+        "units": UNIT_SYSTEM,
+    }
+
+    try:
+        resp = requests.get(url, params=params, timeout=10)
+        if resp.status_code != 200:
+            logger.error("Weather API error: %d", resp.status_code)
+            return jsonify({"error": "API error", "enabled": True})
+
+        data = resp.json()
+        temp = data.get("main", {}).get("temp", 0)
+        description = data.get("weather", [{}])[0].get("description", "")
+        icon_id = data.get("weather", [{}])[0].get("id", "")
+        icon_code = data.get("weather", [{}])[0].get("icon", "")
+        city_name = data.get("name", "")
+
+        unit_symbol = "°C" if UNIT_SYSTEM == "metric" else "°F"
+
+        icon_url = WEATHER_ICON_URL.replace("{IconId}", icon_code)
+
+        return jsonify({
+            "enabled": True,
+            "city": city_name,
+            "temp": round(temp),
+            "unit": unit_symbol,
+            "description": description,
+            "iconId": icon_code,
+            "iconUrl": icon_url,
+        })
+
+    except requests.RequestException as exc:
+        logger.error("Weather fetch error: %s", exc)
+        return jsonify({"error": str(exc), "enabled": True})
 
 
 if __name__ == "__main__":

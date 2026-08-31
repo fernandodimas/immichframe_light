@@ -143,6 +143,41 @@
             margin-top: 4px;
         }
 
+        /* Weather */
+        #weather {
+            color: var(--primary-color, #f5deb3);
+            font-family: Helvetica, Arial, sans-serif;
+            font-size: 16px;
+            font-weight: 400;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9);
+            margin-top: 12px;
+            display: -webkit-flex;
+            display: flex;
+            -webkit-align-items: center;
+            align-items: center;
+            gap: 8px;
+        }
+
+        #weather-icon {
+            width: 32px;
+            height: 32px;
+        }
+
+        #weather-temp {
+            font-size: 20px;
+            font-weight: 300;
+        }
+
+        #weather-city {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        #weather-desc {
+            font-size: 14px;
+            opacity: 0.8;
+        }
+
         /* Bottom right - Photo info */
         #bottom-right {
             position: fixed;
@@ -219,6 +254,14 @@
     <div id="bottom-left">
         <div id="clock"></div>
         <div id="clock-date"></div>
+        <div id="weather">
+            <img id="weather-icon" src="" alt="">
+            <div>
+                <div id="weather-temp"></div>
+                <div id="weather-city"></div>
+                <div id="weather-desc"></div>
+            </div>
+        </div>
     </div>
 
     <!-- Bottom right - Photo info -->
@@ -274,6 +317,46 @@
 
         function getServerTime() {
             return new Date(Date.now() + serverTimeOffset);
+        }
+
+        function fetchWeather() {
+            var weatherEl = document.getElementById("weather");
+            var weatherIcon = document.getElementById("weather-icon");
+            var weatherTemp = document.getElementById("weather-temp");
+            var weatherCity = document.getElementById("weather-city");
+            var weatherDesc = document.getElementById("weather-desc");
+
+            var xhr = new XMLHttpRequest();
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState === 4) {
+                    if (xhr.status === 200) {
+                        try {
+                            var data = JSON.parse(xhr.responseText);
+                            if (data.enabled && !data.error) {
+                                weatherIcon.src = data.iconUrl;
+                                weatherIcon.alt = data.description;
+                                weatherTemp.innerHTML = data.city + ", " + data.temp + data.unit;
+                                if (data.description) {
+                                    weatherDesc.innerHTML = data.description;
+                                }
+                                weatherEl.style.display = "";
+                            } else {
+                                weatherEl.style.display = "none";
+                            }
+                        } catch (e) {
+                            weatherEl.style.display = "none";
+                        }
+                    } else {
+                        weatherEl.style.display = "none";
+                    }
+                }
+            };
+            xhr.onerror = function () {
+                weatherEl.style.display = "none";
+            };
+            xhr.open("GET", "/api/weather", true);
+            xhr.timeout = 10000;
+            xhr.send(null);
         }
 
         function formatDate(dateStr, format) {
@@ -541,6 +624,9 @@
         function init() {
             fetchServerTime();
             setInterval(fetchServerTime, 60000);
+
+            fetchWeather();
+            setInterval(fetchWeather, 600000);
 
             updateClock();
             window.setInterval(updateClock, 1000);
