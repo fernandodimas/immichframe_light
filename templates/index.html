@@ -26,93 +26,41 @@
             left: 0;
             width: 100%;
             height: 100%;
-            display: -webkit-flex;
-            display: flex;
-            -webkit-align-items: center;
-            align-items: center;
-            -webkit-justify-content: center;
-            justify-content: center;
         }
 
         #current-image {
-            max-width: 100%;
-            max-height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
             display: none;
             -webkit-user-select: none;
             -webkit-touch-callout: none;
-            -webkit-tap-highlight-color: transparent;
         }
 
         #current-image.active {
             display: block;
         }
 
-        #loading-indicator {
+        #debug-bar {
             position: fixed;
-            top: 50%;
-            left: 50%;
-            -webkit-transform: translate(-50%, -50%);
-            transform: translate(-50%, -50%);
-            color: #555;
-            font-family: Helvetica, Arial, sans-serif;
-            font-size: 16px;
-            z-index: 10;
-        }
-
-        #error-message {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            -webkit-transform: translate(-50%, -50%);
-            transform: translate(-50%, -50%);
-            color: #ff4444;
-            font-family: Helvetica, Arial, sans-serif;
-            font-size: 14px;
-            text-align: left;
-            z-index: 10;
-            display: none;
-            background: rgba(0,0,0,0.8);
-            padding: 20px;
-            border-radius: 8px;
-            max-width: 90%;
-            word-wrap: break-word;
-        }
-
-        #error-message.visible {
-            display: block;
-        }
-
-        #error-message p {
-            margin: 5px 0;
-            color: #ccc;
-        }
-
-        #error-message .error-title {
-            color: #ff4444;
-            font-size: 16px;
-            font-weight: bold;
-            margin-bottom: 10px;
-        }
-
-        #error-message .error-detail {
-            color: #888;
-            font-size: 12px;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0,0,0,0.85);
+            color: #0f0;
             font-family: monospace;
-        }
-
-        #status-bar {
-            position: fixed;
-            bottom: 8px;
-            right: 12px;
-            color: #555;
-            font-family: Helvetica, Arial, sans-serif;
-            font-size: 11px;
-            z-index: 5;
+            font-size: 12px;
+            padding: 8px 12px;
+            z-index: 999;
+            min-height: 40px;
+            word-wrap: break-word;
         }
 
         #clock {
             position: fixed;
-            top: 16px;
+            top: 50px;
             right: 20px;
             color: #fff;
             font-family: Helvetica, Arial, sans-serif;
@@ -122,12 +70,11 @@
             text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
             z-index: 20;
             -webkit-user-select: none;
-            -webkit-touch-callout: none;
         }
 
         #clock-date {
             position: fixed;
-            top: 72px;
+            top: 106px;
             right: 20px;
             color: #fff;
             font-family: Helvetica, Arial, sans-serif;
@@ -137,70 +84,47 @@
             text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
             z-index: 20;
             -webkit-user-select: none;
-            -webkit-touch-callout: none;
         }
     </style>
 </head>
 <body>
+    <div id="debug-bar">Starting...</div>
+
     <div id="slideshow">
         <img id="current-image" alt="" draggable="false">
     </div>
 
-    <div id="loading-indicator">Loading...</div>
-    <div id="error-message">
-        <div class="error-title">Error</div>
-        <div id="error-details"></div>
-    </div>
     <div id="clock">00:00</div>
     <div id="clock-date"></div>
-    <div id="status-bar"></div>
 
     <script>
     (function () {
+        var debugEl = document.getElementById("debug-bar");
         var clockEl = document.getElementById("clock");
         var clockDateEl = document.getElementById("clock-date");
         var imgEl = document.getElementById("current-image");
-        var loadingEl = document.getElementById("loading-indicator");
-        var errorEl = document.getElementById("error-message");
-        var errorDetails = document.getElementById("error-details");
-        var statusBar = document.getElementById("status-bar");
 
         var thumbnails = [];
         var intervalSec = 15;
         var currentIndex = 0;
         var isTransitioning = false;
-        var logLines = [];
 
-        function addLog(msg) {
-            var ts = new Date().toLocaleTimeString();
-            var line = ts + " - " + msg;
-            logLines.push(line);
-            if (logLines.length > 20) {
-                logLines.shift();
+        function setDebug(msg) {
+            if (debugEl) {
+                debugEl.innerHTML = msg;
             }
             if (window.console && console.log) {
                 console.log("[Frame] " + msg);
             }
         }
 
-        function showError(title, detail) {
-            if (errorEl) {
-                errorEl.className = "visible";
-                var html = "";
-                if (title) {
-                    html += "<div class='error-title'>" + title + "</div>";
-                }
-                if (detail) {
-                    html += "<p>" + detail + "</p>";
-                }
-                html += "<div class='error-detail'>" + logLines.join("<br>") + "</div>";
-                errorDetails.innerHTML = html;
+        function appendDebug(msg) {
+            if (debugEl) {
+                debugEl.innerHTML = debugEl.innerHTML + "<br>" + msg;
             }
-            if (loadingEl) { loadingEl.style.display = "none"; }
-        }
-
-        function hideLoading() {
-            if (loadingEl) { loadingEl.style.display = "none"; }
+            if (window.console && console.log) {
+                console.log("[Frame] " + msg);
+            }
         }
 
         function padZero(n) {
@@ -223,62 +147,17 @@
             }
         }
 
-        function startClock() {
-            updateClock();
-            window.setInterval(updateClock, 1000);
-        }
-
-        function fetchJSON(url, callback) {
-            addLog("Fetching: " + url);
-            var xhr = new XMLHttpRequest();
-            xhr.onreadystatechange = function () {
-                if (xhr.readyState === 4) {
-                    addLog("Response status: " + xhr.status);
-                    if (xhr.status === 200) {
-                        try {
-                            var data = JSON.parse(xhr.responseText);
-                            addLog("Parsed OK, thumbnails: " + (data.thumbnails ? data.thumbnails.length : 0));
-                            callback(null, data);
-                        } catch (e) {
-                            addLog("JSON parse error: " + e.message);
-                            callback("JSON parse error");
-                        }
-                    } else {
-                        addLog("HTTP error: " + xhr.status + " " + xhr.responseText.substring(0, 100));
-                        callback("HTTP " + xhr.status);
-                    }
-                }
-            };
-            xhr.onerror = function () {
-                addLog("Network error");
-                callback("Network error");
-            };
-            xhr.ontimeout = function () {
-                addLog("Request timeout");
-                callback("Timeout");
-            };
-            xhr.open("GET", url, true);
-            xhr.timeout = 15000;
-            xhr.send(null);
-        }
-
         function showImage(url) {
             if (!imgEl) { return; }
 
-            addLog("Showing image: " + url.substring(0, 80) + "...");
-
             imgEl.onload = function () {
-                addLog("Image loaded OK");
+                setDebug("OK: Image displayed (" + (currentIndex + 1) + "/" + thumbnails.length + ")");
                 imgEl.className = "active";
-                hideLoading();
                 isTransitioning = false;
-                if (statusBar) {
-                    statusBar.innerHTML = (currentIndex + 1) + " / " + thumbnails.length;
-                }
             };
 
             imgEl.onerror = function () {
-                addLog("Image load FAILED: " + url.substring(0, 80));
+                appendDebug("FAIL: Could not load image");
                 isTransitioning = false;
                 advanceToNext();
             };
@@ -287,7 +166,7 @@
         }
 
         function preloadAndShow(url) {
-            addLog("Preloading: " + url.substring(0, 80) + "...");
+            appendDebug("Loading: " + url.substring(0, 60));
             var preloader = new Image();
             var done = false;
 
@@ -295,10 +174,9 @@
                 if (done) { return; }
                 done = true;
                 if (success) {
-                    addLog("Preload OK");
                     showImage(url);
                 } else {
-                    addLog("Preload FAILED");
+                    appendDebug("FAIL: Preload error");
                     isTransitioning = false;
                     advanceToNext();
                 }
@@ -311,32 +189,27 @@
 
             window.setTimeout(function () {
                 if (!done) {
-                    addLog("Preload timeout");
+                    appendDebug("FAIL: Timeout 15s");
                     onDone(false);
                 }
             }, 15000);
         }
 
         function advanceToNext() {
-            if (thumbnails.length === 0) {
-                showError("No images", "Thumbnail list is empty");
-                return;
-            }
-
+            if (thumbnails.length === 0) { return; }
             if (isTransitioning) { return; }
             isTransitioning = true;
-
             currentIndex = (currentIndex + 1) % thumbnails.length;
             preloadAndShow(thumbnails[currentIndex]);
         }
 
         function startSlideshow() {
             if (thumbnails.length === 0) {
-                showError("No images", "Album returned 0 thumbnails");
+                setDebug("ERROR: No images in album");
                 return;
             }
 
-            hideLoading();
+            setDebug("Starting slideshow: " + thumbnails.length + " images");
             isTransitioning = true;
             preloadAndShow(thumbnails[0]);
 
@@ -345,20 +218,52 @@
             }, intervalSec * 1000);
         }
 
+        function fetchJSON(url, callback) {
+            setDebug("Fetching " + url + "...");
+            var xhr = new XMLHttpRequest();
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState === 4) {
+                    appendDebug("Status: " + xhr.status);
+                    if (xhr.status === 200) {
+                        try {
+                            var data = JSON.parse(xhr.responseText);
+                            appendDebug("Got " + (data.thumbnails ? data.thumbnails.length : 0) + " thumbnails");
+                            callback(null, data);
+                        } catch (e) {
+                            appendDebug("FAIL: JSON parse error");
+                            callback("parse error");
+                        }
+                    } else {
+                        appendDebug("FAIL: HTTP " + xhr.status);
+                        callback("http error");
+                    }
+                }
+            };
+            xhr.onerror = function () {
+                appendDebug("FAIL: Network error");
+                callback("network error");
+            };
+            xhr.ontimeout = function () {
+                appendDebug("FAIL: Timeout");
+                callback("timeout");
+            };
+            xhr.open("GET", url, true);
+            xhr.timeout = 15000;
+            xhr.send(null);
+        }
+
         function init() {
-            startClock();
-            addLog("Init started");
+            updateClock();
+            window.setInterval(updateClock, 1000);
 
             fetchJSON("/api/slideshow", function (err, data) {
                 if (err) {
-                    showError("API Error", "Could not fetch /api/slideshow: " + err);
+                    setDebug("ERROR: " + err);
                     return;
                 }
 
                 thumbnails = data.thumbnails || [];
                 intervalSec = data.interval || 15;
-
-                addLog("Data received: " + thumbnails.length + " images");
 
                 startSlideshow();
             });
