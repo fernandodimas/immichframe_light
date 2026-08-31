@@ -108,9 +108,22 @@ logger.info("IMMICH_URL: %s", IMMICH_URL)
 logger.info("IMMICH_ALBUM_ID: %s", IMMICH_ALBUM_ID or "NOT SET")
 logger.info("INTERVAL: %ds, TRANSITION: %.1fs, SHUFFLE: %s", INTERVAL_SECONDS, TRANSITION_DURATION, SHUFFLE)
 
+# Cache for album assets (refreshes every 5 minutes)
+_assets_cache = {}
+_assets_cache_time = 0
+ASSETS_CACHE_TTL = 300  # 5 minutes
+
 
 def fetch_album_assets():
     """Fetch asset list from Immich album API and return asset data."""
+    global _assets_cache, _assets_cache_time
+
+    # Return cached data if fresh
+    cache_key = IMMICH_ALBUM_ID
+    if cache_key in _assets_cache and (time.time() - _assets_cache_time) < ASSETS_CACHE_TTL:
+        logger.debug("Returning cached assets for album %s", IMMICH_ALBUM_ID)
+        return _assets_cache[cache_key]
+
     if not IMMICH_API_KEY or not IMMICH_ALBUM_ID:
         logger.warning("IMMICH_API_KEY or IMMICH_ALBUM_ID not configured")
         return []
@@ -205,8 +218,9 @@ def fetch_album_assets():
 
         result.append(item)
 
-    if SHUFFLE:
-        random.shuffle(result)
+    # Update cache
+    _assets_cache[cache_key] = result
+    _assets_cache_time = time.time()
 
     logger.info("Loaded %d assets from album", len(result))
     return result
