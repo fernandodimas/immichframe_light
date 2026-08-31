@@ -9,12 +9,47 @@ import os
 import logging
 import json
 import random
+import threading
 from datetime import datetime
 
 import requests
 from flask import Flask, render_template, jsonify, Response
 
 app = Flask(__name__)
+
+WEATHER_ICONS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "weather_icons")
+os.makedirs(WEATHER_ICONS_DIR, exist_ok=True)
+
+WEATHER_ICON_CODES = [
+    "01d", "01n", "02d", "02n", "03d", "03n", "04d", "04n",
+    "09d", "09n", "10d", "10n", "11d", "11n", "13d", "13n", "50d", "50n"
+]
+
+_icons_downloaded = False
+
+def _download_weather_icons():
+    """Download all weather icons from OpenWeatherMap on startup."""
+    global _icons_downloaded
+    if _icons_downloaded:
+        return
+
+    for code in WEATHER_ICON_CODES:
+        path = os.path.join(WEATHER_ICONS_DIR, "{}.png".format(code))
+        if os.path.exists(path):
+            continue
+        url = "https://openweathermap.org/img/wn/{}@2x.png".format(code)
+        try:
+            resp = requests.get(url, timeout=10)
+            if resp.status_code == 200:
+                with open(path, "wb") as f:
+                    f.write(resp.content)
+                logger.info("Downloaded weather icon: %s", code)
+        except Exception as exc:
+            logger.error("Failed to download weather icon %s: %s", code, exc)
+
+    _icons_downloaded = True
+
+threading.Thread(target=_download_weather_icons, daemon=True).start()
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -325,24 +360,22 @@ def api_weather():
 
 @app.route("/api/weather-icon/<icon_code>")
 def api_weather_icon(icon_code):
-    """Proxy endpoint to fetch weather icon from OpenWeatherMap."""
-    url = "https://openweathermap.org/img/wn/{}@2x.png".format(icon_code)
+    """Serve cached weather icon."""
+    # Remove @2x suffix if present
+    icon_code = icon_code.replace("@2x", "")
+    
+    path = os.path.join(WEATHER_ICONS_DIR, "{}.png".format(icon_code))
+    if not os.path.exists(path):
+        return "Icon not found", 404
 
-    try:
-        resp = requests.get(url, timeout=10, stream=True)
-        if resp.status_code != 200:
-            return "Icon not found", 404
+    with open(path, "rb") as f:
+        content = f.read()
 
-        content_type = resp.headers.get("Content-Type", "image/png")
-        return Response(
-            resp.iter_content(chunk_size=4096),
-            content_type=content_type,
-            headers={"Cache-Control": "public, max-age=3600"},
-        )
-
-    except requests.RequestException as exc:
-        logger.error("Weather icon proxy error: %s", exc)
-        return "Proxy error", 502
+    return Response(
+        content,
+        content_type="image/png",
+        headers={"Cache-Control": "public, max-age=604800"},
+    )
 
 
 if __name__ == "__main__":
