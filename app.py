@@ -136,9 +136,10 @@ def fetch_album_assets():
             if detail_resp.status_code == 200:
                 detail = detail_resp.json()
 
-                # Log available keys for first asset only
+                # Log full detail for first asset only
                 if len(result) == 0:
-                    logger.info("Asset detail keys: %s", list(detail.keys()))
+                    import json as json_mod
+                    logger.info("Full asset detail: %s", json_mod.dumps(detail, indent=2, default=str)[:3000])
 
                 # Extract people names
                 people = detail.get("people", [])
@@ -178,9 +179,6 @@ def fetch_album_assets():
                 if "Country" in IMAGE_LOCATION_FORMAT and country:
                     location_parts.append(country)
                 item["location"] = ", ".join(location_parts)
-
-                if len(result) == 0:
-                    logger.info("Asset %s location: city=%s, state=%s, country=%s", asset_id, city, state, country)
 
                 logger.debug("Asset %s: people=%s, location=%s", asset_id, item["people"], item["location"])
         except Exception as exc:

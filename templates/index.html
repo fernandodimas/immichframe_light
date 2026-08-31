@@ -151,16 +151,24 @@
             font-weight: 400;
             text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9);
             margin-top: 12px;
-            display: -webkit-flex;
-            display: flex;
+            display: none;
+            -webkit-flex-direction: row;
+            flex-direction: row;
             -webkit-align-items: center;
             align-items: center;
-            gap: 8px;
+        }
+
+        #weather.visible {
+            display: -webkit-flex;
+            display: flex;
         }
 
         #weather-icon {
-            width: 32px;
-            height: 32px;
+            width: 40px;
+            height: 40px;
+            margin-right: 10px;
+            -webkit-flex-shrink: 0;
+            flex-shrink: 0;
         }
 
         #weather-temp {
@@ -339,20 +347,20 @@
                                 if (data.description) {
                                     weatherDesc.innerHTML = data.description;
                                 }
-                                weatherEl.style.display = "";
+                                weatherEl.className = "visible";
                             } else {
-                                weatherEl.style.display = "none";
+                                weatherEl.className = "";
                             }
                         } catch (e) {
-                            weatherEl.style.display = "none";
+                            weatherEl.className = "";
                         }
                     } else {
-                        weatherEl.style.display = "none";
+                        weatherEl.className = "";
                     }
                 }
             };
             xhr.onerror = function () {
-                weatherEl.style.display = "none";
+                weatherEl.className = "";
             };
             xhr.open("GET", "/api/weather", true);
             xhr.timeout = 10000;
