@@ -10,7 +10,7 @@ import logging
 import json
 
 import requests
-from flask import Flask, render_template, jsonify
+from flask import Flask, render_template, jsonify, Response
 
 app = Flask(__name__)
 
@@ -32,15 +32,13 @@ logger.info("INTERVAL_SECONDS: %s", INTERVAL_SECONDS)
 
 
 def fetch_album_assets():
-    """Fetch asset list from Immich album API and return thumbnail URLs."""
+    """Fetch asset list from Immich album API and return asset IDs."""
     if not IMMICH_API_KEY or not IMMICH_ALBUM_ID:
         logger.warning("IMMICH_API_KEY or IMMICH_ALBUM_ID not configured")
         return []
 
     headers = {"x-api-key": IMMICH_API_KEY}
 
-    # Immich v3: /api/albums/{id} no longer returns assets.
-    # Use POST /api/search/metadata with albumIds filter instead.
     search_url = "{}/api/search/metadata".format(IMMICH_URL)
     payload = {
         "albumIds": [IMMICH_ALBUM_ID],
@@ -48,7 +46,6 @@ def fetch_album_assets():
     }
 
     logger.debug("Requesting: POST %s", search_url)
-    logger.debug("Payload: %s", payload)
 
     try:
         resp = requests.post(search_url, json=payload, headers=headers, timeout=30)
@@ -73,17 +70,14 @@ def fetch_album_assets():
         logger.warning("Album '%s' has no assets", IMMICH_ALBUM_ID)
         return []
 
-    thumbnails = []
+    asset_ids = []
     for asset in assets:
         asset_id = asset.get("id")
         if asset_id:
-            thumb_url = "{}/api/assets/{}/thumbnail?size=preview".format(
-                IMMICH_URL, asset_id
-            )
-            thumbnails.append(thumb_url)
+            asset_ids.append(asset_id)
 
-    logger.info("Loaded %d thumbnails from album", len(thumbnails))
-    return thumbnails
+    logger.info("Loaded %d assets from album", len(asset_ids))
+    return asset_ids
 
 
 @app.route("/")
@@ -95,15 +89,36 @@ def index():
 @app.route("/api/slideshow")
 def api_slideshow():
     """API endpoint to get slideshow data for JavaScript."""
-    thumbnails = fetch_album_assets()
-    return jsonify({"thumbnails": thumbnails, "interval": INTERVAL_SECONDS})
+    asset_ids = fetch_album_assets()
+    return jsonify({"assets": asset_ids, "interval": INTERVAL_SECONDS})
 
 
-@app.route("/api/thumbnails")
-def api_thumbnails():
-    """API endpoint to refresh thumbnail list without page reload."""
-    thumbnails = fetch_album_assets()
-    return jsonify({"thumbnails": thumbnails, "interval": INTERVAL_SECONDS})
+@app.route("/api/thumbnail/<asset_id>")
+def api_thumbnail(asset_id):
+    """Proxy endpoint to fetch thumbnail from Immich with authentication."""
+    if not IMMICH_API_KEY:
+        return "Unauthorized", 401
+
+    url = "{}/api/assets/{}/thumbnail?size=preview".format(IMMICH_URL, asset_id)
+    headers = {"x-api-key": IMMICH_API_KEY}
+
+    try:
+        resp = requests.get(url, headers=headers, timeout=30, stream=True)
+        logger.debug("Thumbnail proxy: %s -> %d", asset_id, resp.status_code)
+
+        if resp.status_code != 200:
+            return "Upstream error", resp.status_code
+
+        content_type = resp.headers.get("Content-Type", "image/jpeg")
+        return Response(
+            resp.iter_content(chunk_size=8192),
+            content_type=content_type,
+            headers={"Cache-Control": "public, max-age=3600"},
+        )
+
+    except requests.RequestException as exc:
+        logger.error("Thumbnail proxy error: %s", exc)
+        return "Proxy error", 502
 
 
 @app.route("/api/debug")
@@ -120,30 +135,10 @@ def api_debug():
         result["error"] = "Missing API key or album ID"
         return jsonify(result)
 
-    headers = {"x-api-key": IMMICH_API_KEY}
-
-    # Test search/metadata endpoint
-    search_url = "{}/api/search/metadata".format(IMMICH_URL)
-    payload = {
-        "albumIds": [IMMICH_ALBUM_ID],
-        "size": 10,
-    }
-
-    try:
-        resp = requests.post(search_url, json=payload, headers=headers, timeout=15)
-        result["search_status"] = resp.status_code
-        if resp.status_code == 200:
-            data = resp.json()
-            assets = data.get("assets", {}).get("items", [])
-            result["assets_found"] = len(assets)
-            result["assets_sample"] = [
-                {"id": a.get("id"), "originalFileName": a.get("originalFileName")}
-                for a in assets[:5]
-            ]
-        else:
-            result["search_error"] = resp.text[:500]
-    except Exception as exc:
-        result["error"] = str(exc)
+    asset_ids = fetch_album_assets()
+    result["assets_found"] = len(asset_ids)
+    if asset_ids:
+        result["thumbnail_url"] = "/api/thumbnail/" + asset_ids[0]
 
     return jsonify(result)
 

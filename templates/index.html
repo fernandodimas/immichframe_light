@@ -104,27 +104,19 @@
         var clockDateEl = document.getElementById("clock-date");
         var imgEl = document.getElementById("current-image");
 
-        var thumbnails = [];
+        var assets = [];
         var intervalSec = 15;
         var currentIndex = 0;
         var isTransitioning = false;
 
         function setDebug(msg) {
-            if (debugEl) {
-                debugEl.innerHTML = msg;
-            }
-            if (window.console && console.log) {
-                console.log("[Frame] " + msg);
-            }
+            if (debugEl) { debugEl.innerHTML = msg; }
+            if (window.console && console.log) { console.log("[Frame] " + msg); }
         }
 
         function appendDebug(msg) {
-            if (debugEl) {
-                debugEl.innerHTML = debugEl.innerHTML + "<br>" + msg;
-            }
-            if (window.console && console.log) {
-                console.log("[Frame] " + msg);
-            }
+            if (debugEl) { debugEl.innerHTML = debugEl.innerHTML + "<br>" + msg; }
+            if (window.console && console.log) { console.log("[Frame] " + msg); }
         }
 
         function padZero(n) {
@@ -136,9 +128,7 @@
             var h = padZero(now.getHours());
             var m = padZero(now.getMinutes());
             var s = padZero(now.getSeconds());
-            if (clockEl) {
-                clockEl.innerHTML = h + ":" + m + ":" + s;
-            }
+            if (clockEl) { clockEl.innerHTML = h + ":" + m + ":" + s; }
             var days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
             var months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
                           "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -147,17 +137,21 @@
             }
         }
 
+        function getThumbUrl(assetId) {
+            return "/api/thumbnail/" + assetId;
+        }
+
         function showImage(url) {
             if (!imgEl) { return; }
 
             imgEl.onload = function () {
-                setDebug("OK: Image displayed (" + (currentIndex + 1) + "/" + thumbnails.length + ")");
+                setDebug("OK: Image displayed (" + (currentIndex + 1) + "/" + assets.length + ")");
                 imgEl.className = "active";
                 isTransitioning = false;
             };
 
             imgEl.onerror = function () {
-                appendDebug("FAIL: Could not load image");
+                appendDebug("FAIL: Could not display image");
                 isTransitioning = false;
                 advanceToNext();
             };
@@ -166,7 +160,7 @@
         }
 
         function preloadAndShow(url) {
-            appendDebug("Loading: " + url.substring(0, 60));
+            appendDebug("Loading: " + url);
             var preloader = new Image();
             var done = false;
 
@@ -196,22 +190,22 @@
         }
 
         function advanceToNext() {
-            if (thumbnails.length === 0) { return; }
+            if (assets.length === 0) { return; }
             if (isTransitioning) { return; }
             isTransitioning = true;
-            currentIndex = (currentIndex + 1) % thumbnails.length;
-            preloadAndShow(thumbnails[currentIndex]);
+            currentIndex = (currentIndex + 1) % assets.length;
+            preloadAndShow(getThumbUrl(assets[currentIndex]));
         }
 
         function startSlideshow() {
-            if (thumbnails.length === 0) {
-                setDebug("ERROR: No images in album");
+            if (assets.length === 0) {
+                setDebug("ERROR: No images");
                 return;
             }
 
-            setDebug("Starting slideshow: " + thumbnails.length + " images");
+            setDebug("Starting: " + assets.length + " images");
             isTransitioning = true;
-            preloadAndShow(thumbnails[0]);
+            preloadAndShow(getThumbUrl(assets[0]));
 
             window.setInterval(function () {
                 advanceToNext();
@@ -227,7 +221,7 @@
                     if (xhr.status === 200) {
                         try {
                             var data = JSON.parse(xhr.responseText);
-                            appendDebug("Got " + (data.thumbnails ? data.thumbnails.length : 0) + " thumbnails");
+                            appendDebug("Got " + (data.assets ? data.assets.length : 0) + " assets");
                             callback(null, data);
                         } catch (e) {
                             appendDebug("FAIL: JSON parse error");
@@ -262,7 +256,7 @@
                     return;
                 }
 
-                thumbnails = data.thumbnails || [];
+                assets = data.assets || [];
                 intervalSec = data.interval || 15;
 
                 startSlideshow();
