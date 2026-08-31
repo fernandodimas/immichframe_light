@@ -65,16 +65,39 @@
             left: 50%;
             -webkit-transform: translate(-50%, -50%);
             transform: translate(-50%, -50%);
-            color: #888;
+            color: #ff4444;
             font-family: Helvetica, Arial, sans-serif;
             font-size: 14px;
-            text-align: center;
+            text-align: left;
             z-index: 10;
             display: none;
+            background: rgba(0,0,0,0.8);
+            padding: 20px;
+            border-radius: 8px;
+            max-width: 90%;
+            word-wrap: break-word;
         }
 
         #error-message.visible {
             display: block;
+        }
+
+        #error-message p {
+            margin: 5px 0;
+            color: #ccc;
+        }
+
+        #error-message .error-title {
+            color: #ff4444;
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        #error-message .error-detail {
+            color: #888;
+            font-size: 12px;
+            font-family: monospace;
         }
 
         #status-bar {
@@ -125,8 +148,8 @@
 
     <div id="loading-indicator">Loading...</div>
     <div id="error-message">
-        <p>No images found.</p>
-        <p>Check your Immich configuration.</p>
+        <div class="error-title">Error</div>
+        <div id="error-details"></div>
     </div>
     <div id="clock">00:00</div>
     <div id="clock-date"></div>
@@ -139,23 +162,45 @@
         var imgEl = document.getElementById("current-image");
         var loadingEl = document.getElementById("loading-indicator");
         var errorEl = document.getElementById("error-message");
+        var errorDetails = document.getElementById("error-details");
         var statusBar = document.getElementById("status-bar");
 
         var thumbnails = [];
         var intervalSec = 15;
         var currentIndex = 0;
         var isTransitioning = false;
+        var logLines = [];
 
-        function log(msg) {
+        function addLog(msg) {
+            var ts = new Date().toLocaleTimeString();
+            var line = ts + " - " + msg;
+            logLines.push(line);
+            if (logLines.length > 20) {
+                logLines.shift();
+            }
             if (window.console && console.log) {
                 console.log("[Frame] " + msg);
             }
         }
 
-        function logError(msg) {
-            if (window.console && console.error) {
-                console.error("[Frame] " + msg);
+        function showError(title, detail) {
+            if (errorEl) {
+                errorEl.className = "visible";
+                var html = "";
+                if (title) {
+                    html += "<div class='error-title'>" + title + "</div>";
+                }
+                if (detail) {
+                    html += "<p>" + detail + "</p>";
+                }
+                html += "<div class='error-detail'>" + logLines.join("<br>") + "</div>";
+                errorDetails.innerHTML = html;
             }
+            if (loadingEl) { loadingEl.style.display = "none"; }
+        }
+
+        function hideLoading() {
+            if (loadingEl) { loadingEl.style.display = "none"; }
         }
 
         function padZero(n) {
@@ -183,40 +228,33 @@
             window.setInterval(updateClock, 1000);
         }
 
-        function showError(msg) {
-            if (errorEl) {
-                if (msg) {
-                    errorEl.innerHTML = "<p>" + msg + "</p>";
-                }
-                errorEl.className = "visible";
-            }
-            if (loadingEl) { loadingEl.style.display = "none"; }
-        }
-
-        function hideLoading() {
-            if (loadingEl) { loadingEl.style.display = "none"; }
-        }
-
         function fetchJSON(url, callback) {
+            addLog("Fetching: " + url);
             var xhr = new XMLHttpRequest();
             xhr.onreadystatechange = function () {
                 if (xhr.readyState === 4) {
+                    addLog("Response status: " + xhr.status);
                     if (xhr.status === 200) {
                         try {
                             var data = JSON.parse(xhr.responseText);
+                            addLog("Parsed OK, thumbnails: " + (data.thumbnails ? data.thumbnails.length : 0));
                             callback(null, data);
                         } catch (e) {
+                            addLog("JSON parse error: " + e.message);
                             callback("JSON parse error");
                         }
                     } else {
+                        addLog("HTTP error: " + xhr.status + " " + xhr.responseText.substring(0, 100));
                         callback("HTTP " + xhr.status);
                     }
                 }
             };
             xhr.onerror = function () {
+                addLog("Network error");
                 callback("Network error");
             };
             xhr.ontimeout = function () {
+                addLog("Request timeout");
                 callback("Timeout");
             };
             xhr.open("GET", url, true);
@@ -227,7 +265,10 @@
         function showImage(url) {
             if (!imgEl) { return; }
 
+            addLog("Showing image: " + url.substring(0, 80) + "...");
+
             imgEl.onload = function () {
+                addLog("Image loaded OK");
                 imgEl.className = "active";
                 hideLoading();
                 isTransitioning = false;
@@ -237,7 +278,7 @@
             };
 
             imgEl.onerror = function () {
-                logError("Image load error: " + url);
+                addLog("Image load FAILED: " + url.substring(0, 80));
                 isTransitioning = false;
                 advanceToNext();
             };
@@ -246,6 +287,7 @@
         }
 
         function preloadAndShow(url) {
+            addLog("Preloading: " + url.substring(0, 80) + "...");
             var preloader = new Image();
             var done = false;
 
@@ -253,8 +295,10 @@
                 if (done) { return; }
                 done = true;
                 if (success) {
+                    addLog("Preload OK");
                     showImage(url);
                 } else {
+                    addLog("Preload FAILED");
                     isTransitioning = false;
                     advanceToNext();
                 }
@@ -267,7 +311,7 @@
 
             window.setTimeout(function () {
                 if (!done) {
-                    log("Timeout loading: " + url);
+                    addLog("Preload timeout");
                     onDone(false);
                 }
             }, 15000);
@@ -275,7 +319,7 @@
 
         function advanceToNext() {
             if (thumbnails.length === 0) {
-                showError("No images available");
+                showError("No images", "Thumbnail list is empty");
                 return;
             }
 
@@ -288,8 +332,7 @@
 
         function startSlideshow() {
             if (thumbnails.length === 0) {
-                log("No images loaded");
-                showError("No images found");
+                showError("No images", "Album returned 0 thumbnails");
                 return;
             }
 
@@ -304,24 +347,18 @@
 
         function init() {
             startClock();
-            log("Fetching slideshow data...");
+            addLog("Init started");
 
             fetchJSON("/api/slideshow", function (err, data) {
                 if (err) {
-                    logError("Failed to fetch data: " + err);
-                    showError("Failed to load: " + err);
+                    showError("API Error", "Could not fetch /api/slideshow: " + err);
                     return;
                 }
 
                 thumbnails = data.thumbnails || [];
                 intervalSec = data.interval || 15;
 
-                log("Loaded " + thumbnails.length + " images, interval: " + intervalSec + "s");
-
-                if (thumbnails.length === 0) {
-                    showError("No images in album");
-                    return;
-                }
+                addLog("Data received: " + thumbnails.length + " images");
 
                 startSlideshow();
             });
