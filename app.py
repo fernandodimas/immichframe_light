@@ -136,15 +136,40 @@ def fetch_album_assets():
             if detail_resp.status_code == 200:
                 detail = detail_resp.json()
 
+                # Log available keys for first asset only
+                if len(result) == 0:
+                    logger.info("Asset detail keys: %s", list(detail.keys()))
+
                 # Extract people names
                 people = detail.get("people", [])
                 if people:
                     item["people"] = [p.get("name", "") for p in people if p.get("name")]
 
-                # Extract location
-                city = detail.get("city", "")
-                state = detail.get("state", "")
-                country = detail.get("country", "")
+                # Try multiple possible location field names
+                city = detail.get("city", "") or detail.get("exifImageCity", "")
+                state = detail.get("state", "") or detail.get("exifImageState", "")
+                country = detail.get("country", "") or detail.get("exifImageCountry", "")
+
+                # Also try nested smartInfo or exif
+                if not city:
+                    smart = detail.get("smartInfo", {})
+                    city = smart.get("city", "")
+                if not state:
+                    smart = detail.get("smartInfo", {})
+                    state = smart.get("state", "")
+                if not country:
+                    smart = detail.get("smartInfo", {})
+                    country = smart.get("country", "")
+
+                # Try exifInfo
+                exif = detail.get("exifInfo", {})
+                if not city:
+                    city = exif.get("city", "")
+                if not state:
+                    state = exif.get("state", "")
+                if not country:
+                    country = exif.get("country", "")
+
                 location_parts = []
                 if "City" in IMAGE_LOCATION_FORMAT and city:
                     location_parts.append(city)
@@ -153,6 +178,9 @@ def fetch_album_assets():
                 if "Country" in IMAGE_LOCATION_FORMAT and country:
                     location_parts.append(country)
                 item["location"] = ", ".join(location_parts)
+
+                if len(result) == 0:
+                    logger.info("Asset %s location: city=%s, state=%s, country=%s", asset_id, city, state, country)
 
                 logger.debug("Asset %s: people=%s, location=%s", asset_id, item["people"], item["location"])
         except Exception as exc:
