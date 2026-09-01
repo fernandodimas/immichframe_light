@@ -11,7 +11,7 @@ import json
 import random
 import time
 import threading
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 
 import requests
 from flask import Flask, render_template, jsonify, Response
@@ -104,6 +104,9 @@ WEATHER_ICON_URL = os.environ.get("WEATHER_ICON_URL", "https://openweathermap.or
 NIGHT_MODE = os.environ.get("NIGHT_MODE", "false").lower() in ("true", "1", "yes")
 NIGHT_MODE_START = os.environ.get("NIGHT_MODE_START", "22:00")
 NIGHT_MODE_END = os.environ.get("NIGHT_MODE_END", "07:00")
+
+# Timezone settings (e.g., -3 for Brasilia, UTC-3, America/Sao_Paulo)
+TIMEZONE = os.environ.get("TIMEZONE", "")
 
 logger.info("IMMICH_URL: %s", IMMICH_URL)
 logger.info("IMMICH_ALBUM_ID: %s", IMMICH_ALBUM_ID or "NOT SET")
@@ -350,8 +353,25 @@ def api_debug():
 
 @app.route("/api/time")
 def api_time():
-    """Return current server time."""
-    now = datetime.now()
+    """Return current server time with timezone."""
+    now = datetime.now(timezone.utc)
+
+    # Apply timezone offset if configured
+    if TIMEZONE:
+        try:
+            # Try numeric offset like "-3" or "3"
+            offset_hours = int(TIMEZONE)
+            tz = timezone(timedelta(hours=offset_hours))
+            now = now.astimezone(tz)
+        except ValueError:
+            # Try named timezone like "America/Sao_Paulo"
+            try:
+                import zoneinfo
+                tz = zoneinfo.ZoneInfo(TIMEZONE)
+                now = now.astimezone(tz)
+            except Exception:
+                pass
+
     return jsonify({
         "timestamp": now.isoformat(),
         "hour": now.hour,

@@ -53,3 +53,6 @@ services:
       - NIGHT_MODE=false          # Enable night mode (black screen)
       - NIGHT_MODE_START=22:00    # Start time (HH:mm)
       - NIGHT_MODE_END=07:00      # End time (HH:mm)
+
+      # === TIMEZONE ===
+      - TIMEZONE=-3               # UTC offset (e.g., -3 for Brasilia, -5 for New York)

@@ -161,6 +161,18 @@ services:
 | `NIGHT_MODE_START` | Start time (HH:mm) | `22:00` |
 | `NIGHT_MODE_END` | End time (HH:mm) | `07:00` |
 
+### Timezone
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `TIMEZONE` | UTC offset in hours | (system default) |
+
+Examples:
+- `-3` for Brasilia (UTC-3)
+- `-5` for New York (UTC-5)
+- `1` for London (UTC+1)
+- `America/Sao_Paulo` (named timezone)
+
 ## Finding your Album UUID
 
 1. Open Immich web UI

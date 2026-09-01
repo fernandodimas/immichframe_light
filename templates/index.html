@@ -445,7 +445,7 @@
         function isNightMode() {
             if (!config.nightMode) return false;
 
-            var now = new Date();
+            var now = getServerTime();
             var currentMinutes = now.getHours() * 60 + now.getMinutes();
 
             var startParts = (config.nightModeStart || "22:00").split(":");
