@@ -1,28 +1,42 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <defs>
-    <linearGradient id="frame" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#e8e8e8"/>
-      <stop offset="100%" style="stop-color:#c0c0c0"/>
+    <linearGradient id="glow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4fc3f7"/>
+      <stop offset="50%" style="stop-color:#81c784"/>
+      <stop offset="100%" style="stop-color:#ffb74d"/>
     </linearGradient>
-    <linearGradient id="light" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#f5deb3"/>
-      <stop offset="50%" style="stop-color:#ffefd5"/>
-      <stop offset="100%" style="stop-color:#f5deb3"/>
+    <linearGradient id="arrow" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#4fc3f7"/>
+      <stop offset="100%" style="stop-color:#ffb74d"/>
     </linearGradient>
+    <filter id="blur">
+      <feGaussianBlur stdDeviation="8"/>
+    </filter>
+    <filter id="glow-filter">
+      <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
   </defs>
-  <!-- Frame body -->
-  <rect x="40" y="60" width="432" height="360" rx="20" ry="20" fill="url(#frame)" stroke="#999" stroke-width="4"/>
-  <!-- Screen -->
-  <rect x="60" y="80" width="392" height="320" rx="8" ry="8" fill="#1a1a1a"/>
-  <!-- Light beam - representing speed/lightness -->
-  <path d="M120 160 Q256 120 392 160 Q256 200 120 160" fill="url(#light)" opacity="0.6"/>
-  <path d="M120 220 Q256 180 392 220 Q256 260 120 220" fill="url(#light)" opacity="0.4"/>
-  <path d="M120 280 Q256 240 392 280 Q256 320 120 280" fill="url(#light)" opacity="0.3"/>
-  <!-- Small photo frame icon in center -->
-  <rect x="200" y="180" width="112" height="90" rx="4" ry="4" fill="none" stroke="#f5deb3" stroke-width="3"/>
-  <circle cx="225" cy="200" r="8" fill="#f5deb3" opacity="0.8"/>
-  <path d="M200 250 L240 210 L270 235 L312 195 L312 270 L200 270 Z" fill="#f5deb3" opacity="0.5"/>
-  <!-- Legs -->
-  <rect x="150" y="420" width="12" height="40" rx="6" ry="6" fill="url(#frame)" stroke="#999" stroke-width="2"/>
-  <rect x="350" y="420" width="12" height="40" rx="6" ry="6" fill="url(#frame)" stroke="#999" stroke-width="2"/>
+  <!-- Background -->
+  <rect x="0" y="0" width="512" height="512" rx="100" ry="100" fill="#1a1a2e"/>
+  <!-- Outer glow -->
+  <rect x="20" y="20" width="472" height="472" rx="80" ry="80" fill="none" stroke="url(#glow)" stroke-width="3" filter="url(#blur)" opacity="0.6"/>
+  <!-- Inner glow -->
+  <rect x="40" y="40" width="432" height="432" rx="70" ry="70" fill="none" stroke="url(#glow)" stroke-width="2" filter="url(#blur)" opacity="0.3"/>
+  <!-- Frame icon - simplified -->
+  <g filter="url(#glow-filter)" transform="translate(256,256)">
+    <!-- Circle (globe/frame) -->
+    <circle cx="0" cy="0" r="100" fill="none" stroke="url(#glow)" stroke-width="6" opacity="0.9"/>
+    <!-- Horizontal line -->
+    <line x1="-100" y1="0" x2="100" y2="0" stroke="url(#glow)" stroke-width="4" opacity="0.7"/>
+    <!-- Vertical curve -->
+    <path d="M0 -100 Q60 0 0 100" fill="none" stroke="url(#glow)" stroke-width="4" opacity="0.7"/>
+    <!-- Wave (representing slideshow/movement) -->
+    <path d="M-80 40 Q-40 0 0 40 Q40 80 80 40" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round"/>
+    <!-- Arrow (representing speed/lightness) -->
+    <path d="M-60 -60 L40 -60 L40 -80 L80 -40 L40 0 L40 -20 L-60 -20 Z" fill="url(#arrow)" opacity="0.9"/>
+  </g>
 </svg>
