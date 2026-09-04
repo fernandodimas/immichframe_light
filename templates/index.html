@@ -613,7 +613,7 @@
         var isTransitioning = false;
         var progressInterval = null;
         var progressWidth = 0;
-        var slideInterval = null;
+        // slideInterval removed - using intervals.slide
         var serverTimeOffset = 0;
         var nightModeInterval = null;
         var intervals = {};
@@ -698,9 +698,9 @@
                     }
                 }
                 currentIndex = 0;
-                if (slideInterval) {
-                    window.clearInterval(slideInterval);
-                    slideInterval = null;
+                if (intervals.slide) {
+                    window.clearInterval(intervals.slide);
+                    intervals.slide = null;
                 }
                 startSlideshow();
             }
@@ -733,14 +733,14 @@
             if (isNightMode()) {
                 nightOverlay.className = "active";
                 stopProgress();
-                if (slideInterval) {
-                    window.clearInterval(slideInterval);
-                    slideInterval = null;
+                if (intervals.slide) {
+                    window.clearInterval(intervals.slide);
+                    intervals.slide = null;
                 }
             } else {
                 nightOverlay.className = "";
-                if (!slideInterval && assets.length > 0) {
-                    slideInterval = intervals.autoReload = window.setInterval(function () {
+                if (!intervals.slide && assets.length > 0) {
+                    intervals.slide = window.setInterval(function () {
                         advanceToNext();
                     }, (config.interval || 20) * 1000);
                     startProgress();
