@@ -1245,7 +1245,7 @@
     
         // Function to clear non-essential intervals (keep slideshow running)
         function clearAllIntervals() {
-            var keepKeys = ['slide'];  // Keep slideshow interval alive
+            var keepKeys = ['slide', 'clock', 'serverTime', 'weather', 'nightMode'];  // Keep essential intervals alive
             for (var key in intervals) {
                 if (intervals[key] && keepKeys.indexOf(key) === -1) {
                     window.clearInterval(intervals[key]);
