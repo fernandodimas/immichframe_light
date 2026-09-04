@@ -67,43 +67,43 @@
         /* Ken Burns zoom effect */
         @-webkit-keyframes zoomIn {
             from { -webkit-transform: scale(1); transform: scale(1); }
-            to { -webkit-transform: scale(1.08); transform: scale(1.08); }
+            to { -webkit-transform: scale(1.02); transform: scale(1.02); }
         }
 
         @-webkit-keyframes zoomOut {
-            from { -webkit-transform: scale(1.08); transform: scale(1.08); }
+            from { -webkit-transform: scale(1.02); transform: scale(1.02); }
             to { -webkit-transform: scale(1); transform: scale(1); }
         }
 
         #current-image.zoom-in {
-            -webkit-animation: zoomIn 25s ease-in-out infinite alternate;
-            animation: zoomIn 25s ease-in-out infinite alternate;
+            -webkit-animation: zoomIn 20s ease-in-out infinite alternate;
+            animation: zoomIn 20s ease-in-out infinite alternate;
         }
 
         #current-image.zoom-out {
-            -webkit-animation: zoomOut 25s ease-in-out infinite alternate;
-            animation: zoomOut 25s ease-in-out infinite alternate;
+            -webkit-animation: zoomOut 20s ease-in-out infinite alternate;
+            animation: zoomOut 20s ease-in-out infinite alternate;
         }
 
         /* Pan effect */
         @-webkit-keyframes panLeft {
             from { -webkit-transform: translate(0, 0); transform: translate(0, 0); }
-            to { -webkit-transform: translate(-2%, 0); transform: translate(-2%, 0); }
+            to { -webkit-transform: translate(-1%, 0); transform: translate(-1%, 0); }
         }
 
         @-webkit-keyframes panRight {
             from { -webkit-transform: translate(0, 0); transform: translate(0, 0); }
-            to { -webkit-transform: translate(2%, 0); transform: translate(2%, 0); }
+            to { -webkit-transform: translate(1%, 0); transform: translate(1%, 0); }
         }
 
         @-webkit-keyframes panUp {
             from { -webkit-transform: translate(0, 0); transform: translate(0, 0); }
-            to { -webkit-transform: translate(0, -2%); transform: translate(0, -2%); }
+            to { -webkit-transform: translate(0, -1%); transform: translate(0, -1%); }
         }
 
         @-webkit-keyframes panDown {
             from { -webkit-transform: translate(0, 0); transform: translate(0, 0); }
-            to { -webkit-transform: translate(0, 2%); transform: translate(0, 2%); }
+            to { -webkit-transform: translate(0, 1%); transform: translate(0, 1%); }
         }
 
         #current-image.pan-left {
@@ -564,7 +564,7 @@
         <div id="clock-date"></div>
         <div id="clock"></div>
         <div id="weather">
-            <div id="weather-icon-wrap"><img id="weather-icon"></div>
+            <div id="weather-icon-wrap"><img id="weather-icon" src="/static/weather-default.png" onerror="this.style.display='none'"></div>
             <div id="weather-info">
                 <div id="weather-temp"></div>
                 <div id="weather-desc"></div>
@@ -616,6 +616,7 @@
         var slideInterval = null;
         var serverTimeOffset = 0;
         var nightModeInterval = null;
+        var intervals = {};
 
         // Local settings (saved to localStorage)
         var localSettings = {
@@ -739,7 +740,7 @@
             } else {
                 nightOverlay.className = "";
                 if (!slideInterval && assets.length > 0) {
-                    slideInterval = window.setInterval(function () {
+                    slideInterval = intervals.autoReload = window.setInterval(function () {
                         advanceToNext();
                     }, (config.interval || 20) * 1000);
                     startProgress();
@@ -800,6 +801,10 @@
             };
             xhr.onerror = function () {
                 weatherEl.className = "";
+                weatherIcon.onerror = function () {
+                    this.src = "/static/weather-default.png";
+                };
+                weatherIcon.src = "/static/weather-default.png";
             };
             xhr.open("GET", "/api/weather", true);
             xhr.timeout = 10000;
@@ -958,22 +963,28 @@
         }
 
         function startProgress() {
+            // Clear any existing progress interval
+            if (intervals.progress) {
+                window.clearInterval(intervals.progress);
+                intervals.progress = null;
+            }
             progressWidth = 0;
             progressBar.style.width = "0%";
-            var step = 100 / ((config.interval || 20) * 10);
-            progressInterval = window.setInterval(function () {
-                progressWidth += step;
+            intervals.progress = window.setInterval(function () {
+                progressWidth += 100 / ((config.interval || 20) * 10);
                 if (progressWidth >= 100) {
                     progressWidth = 100;
+                    window.clearInterval(intervals.progress);
+                    intervals.progress = null;
                 }
                 progressBar.style.width = progressWidth + "%";
             }, 100);
         }
 
         function stopProgress() {
-            if (progressInterval) {
-                window.clearInterval(progressInterval);
-                progressInterval = null;
+            if (intervals.progress) {
+                window.clearInterval(intervals.progress);
+                intervals.progress = null;
             }
         }
 
@@ -1051,6 +1062,7 @@
         var preloaderTimeout = null;
 
         function preloadAndShow(url, asset) {
+            // Clean up previous preloader
             if (preloader) {
                 preloader.onload = null;
                 preloader.onerror = null;
@@ -1076,7 +1088,8 @@
                     showImage(url, asset);
                 } else {
                     isTransitioning = false;
-                    advanceToNext();
+                    // Don't immediately advance - let the user see the error
+                    // advanceToNext();
                 }
             }
 
@@ -1085,12 +1098,15 @@
 
             preloader.src = url;
 
+            // Reduced timeout from 15s to 8s for iOS 9 compatibility
             preloaderTimeout = window.setTimeout(function () {
                 if (!done) { onDone(false); }
-            }, 15000);
+            }, 8000);
         }
 
         function goToIndex(index) {
+            // Clear intervals before navigating
+            clearAllIntervals();
             if (assets.length === 0) { return; }
             if (isTransitioning) { return; }
 
@@ -1105,6 +1121,8 @@
         }
 
         function advanceToNext() {
+            // Clear intervals before advancing
+            clearAllIntervals();
             goToIndex(currentIndex + 1);
         }
 
@@ -1123,7 +1141,7 @@
             var asset = assets[0];
             preloadAndShow(getThumbUrl(asset.id), asset);
 
-            slideInterval = window.setInterval(function () {
+            intervals.slide = window.setInterval(function () {
                 advanceToNext();
             }, (config.interval || 20) * 1000);
         }
@@ -1157,18 +1175,18 @@
             loadLocalSettings();
 
             fetchServerTime();
-            setInterval(fetchServerTime, 60000);
+            intervals.serverTime = setInterval(fetchServerTime, 300000);
 
             fetchWeather();
-            setInterval(fetchWeather, 600000);
+            intervals.weather = setInterval(fetchWeather, 1800000);
 
             updateClock();
-            window.setInterval(updateClock, 1000);
+            intervals.clock = window.setInterval(updateClock, 1000);
 
-            nightModeInterval = window.setInterval(updateNightMode, 30000);
+            intervals.nightMode = window.setInterval(updateNightMode, 30000);
 
             // Auto-refresh every 30 minutes
-            window.setInterval(function () {
+            intervals.autoReload = window.setInterval(function () {
                 window.location.reload();
             }, 1800000);
 
@@ -1180,7 +1198,7 @@
                 navNext.style.display = "";
                 document.getElementById("settings-btn").style.opacity = "0.5";
                 clearTimeout(hideTimer);
-                hideTimer = window.setTimeout(function () {
+                intervals.navHide = window.setTimeout(function () {
                     navPrev.style.opacity = "0";
                     navNext.style.opacity = "0";
                     document.getElementById("settings-btn").style.opacity = "0";
@@ -1225,7 +1243,21 @@
             document.addEventListener("DOMContentLoaded", init);
         }
 
-    })();
+    
+        // Function to clear all intervals
+        function clearAllIntervals() {
+            for (var key in intervals) {
+                if (intervals[key]) {
+                    window.clearInterval(intervals[key]);
+                    intervals[key] = null;
+                }
+            }
+        }
+
+        // Make clearAllIntervals available globally
+        window.clearAllIntervals = clearAllIntervals;
+
+    })(
     </script>
 </body>
 </html>
