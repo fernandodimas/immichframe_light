@@ -1088,8 +1088,7 @@
                     showImage(url, asset);
                 } else {
                     isTransitioning = false;
-                    // Don't immediately advance - let the user see the error
-                    // advanceToNext();
+                    advanceToNext();
                 }
             }
 
@@ -1244,10 +1243,11 @@
         }
 
     
-        // Function to clear all intervals
+        // Function to clear non-essential intervals (keep slideshow running)
         function clearAllIntervals() {
+            var keepKeys = ['slide'];  // Keep slideshow interval alive
             for (var key in intervals) {
-                if (intervals[key]) {
+                if (intervals[key] && keepKeys.indexOf(key) === -1) {
                     window.clearInterval(intervals[key]);
                     intervals[key] = null;
                 }
