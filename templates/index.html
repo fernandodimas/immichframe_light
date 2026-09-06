@@ -1019,7 +1019,14 @@
         function showImage(url, asset) {
             if (!imgEl) { return; }
 
+            // Clear previous animations and classes
+            imgEl.className = "";
+            imgEl.style.animation = "none";
+
             imgEl.onload = function () {
+                // Force reflow to restart animations
+                void imgEl.offsetWidth;
+                imgEl.style.animation = "";
                 var classes = ["active"];
                 if (config.imageFill) {
                     classes.push("fill");
@@ -1064,12 +1071,16 @@
         var preloaderTimeout = null;
 
         function preloadAndShow(url, asset) {
-            // Clean up previous preloader
+            // Clean up previous preloader and release memory
             if (preloader) {
                 preloader.onload = null;
                 preloader.onerror = null;
                 preloader.src = "";
                 preloader = null;
+            }
+            // Release current image memory before loading new one
+            if (imgEl && imgEl.src) {
+                imgEl.src = "";
             }
             if (preloaderTimeout) {
                 clearTimeout(preloaderTimeout);
@@ -1122,6 +1133,11 @@
         }
 
         function advanceToNext() {
+            // Clear animations on current image before advancing
+            if (imgEl) {
+                imgEl.className = "";
+                imgEl.style.animation = "none";
+            }
             // Clear intervals before advancing
             clearAllIntervals();
             goToIndex(currentIndex + 1);
@@ -1186,8 +1202,24 @@
 
             intervals.nightMode = window.setInterval(updateNightMode, 30000);
 
-            // Auto-refresh every 30 minutes
+            // Auto-refresh every 30 minutes - clean up first
             intervals.autoReload = window.setInterval(function () {
+                // Stop all animations
+                var img = document.getElementById('current-image');
+                if (img) {
+                    img.style.animation = 'none';
+                    img.src = '';
+                }
+                // Clear all intervals
+                for (var key in intervals) {
+                    if (intervals[key]) {
+                        window.clearInterval(intervals[key]);
+                        intervals[key] = null;
+                    }
+                }
+                // Force garbage collection
+                if (window.gc) { window.gc(); }
+                // Reload
                 window.location.reload();
             }, 1800000);
 
