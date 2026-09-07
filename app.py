@@ -64,7 +64,7 @@ IMMICH_API_KEY = os.environ.get("IMMICH_API_KEY", "")
 IMMICH_ALBUM_ID = os.environ.get("IMMICH_ALBUM_ID", "")
 
 # Slideshow settings
-INTERVAL_SECONDS = int(os.environ.get("INTERVAL_SECONDS", "20"))
+INTERVAL_SECONDS = int(os.environ.get("INTERVAL_SECONDS", "15"))
 TRANSITION_DURATION = float(os.environ.get("TRANSITION_DURATION", "2"))
 SHUFFLE = os.environ.get("SHUFFLE", "true").lower() in ("true", "1", "yes")
 
