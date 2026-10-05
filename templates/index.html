@@ -57,85 +57,6 @@
 
         #current-image.active {
             display: block;
-            -webkit-animation: fadeIn 1s ease-in;
-            animation: fadeIn 1s ease-in;
-        }
-
-        @-webkit-keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-
-        /* Image fill mode */
-        #current-image.fill {
-            object-fit: cover;
-        }
-
-        /* Ken Burns zoom effect */
-        @-webkit-keyframes zoomIn {
-            from { -webkit-transform: scale(1); transform: scale(1); }
-            to { -webkit-transform: scale(1.02); transform: scale(1.02); }
-        }
-
-        @-webkit-keyframes zoomOut {
-            from { -webkit-transform: scale(1.02); transform: scale(1.02); }
-            to { -webkit-transform: scale(1); transform: scale(1); }
-        }
-
-        #current-image.zoom-in {
-            -webkit-animation: zoomIn 30s ease-in-out infinite alternate;
-            animation: zoomIn 30s ease-in-out infinite alternate;
-        }
-
-        #current-image.zoom-out {
-            -webkit-animation: zoomOut 30s ease-in-out infinite alternate;
-            animation: zoomOut 30s ease-in-out infinite alternate;
-        }
-
-        /* Pan effect */
-        @-webkit-keyframes panLeft {
-            from { -webkit-transform: translate(0, 0); transform: translate(0, 0); }
-            to { -webkit-transform: translate(-1%, 0); transform: translate(-1%, 0); }
-        }
-
-        @-webkit-keyframes panRight {
-            from { -webkit-transform: translate(0, 0); transform: translate(0, 0); }
-            to { -webkit-transform: translate(1%, 0); transform: translate(1%, 0); }
-        }
-
-        @-webkit-keyframes panUp {
-            from { -webkit-transform: translate(0, 0); transform: translate(0, 0); }
-            to { -webkit-transform: translate(0, -1%); transform: translate(0, -1%); }
-        }
-
-        @-webkit-keyframes panDown {
-            from { -webkit-transform: translate(0, 0); transform: translate(0, 0); }
-            to { -webkit-transform: translate(0, 1%); transform: translate(0, 1%); }
-        }
-
-        #current-image.pan-left {
-            -webkit-animation: panLeft 25s ease-in-out infinite alternate;
-            animation: panLeft 25s ease-in-out infinite alternate;
-        }
-
-        #current-image.pan-right {
-            -webkit-animation: panRight 25s ease-in-out infinite alternate;
-            animation: panRight 25s ease-in-out infinite alternate;
-        }
-
-        #current-image.pan-up {
-            -webkit-animation: panUp 25s ease-in-out infinite alternate;
-            animation: panUp 25s ease-in-out infinite alternate;
-        }
-
-        #current-image.pan-down {
-            -webkit-animation: panDown 25s ease-in-out infinite alternate;
-            animation: panDown 25s ease-in-out infinite alternate;
         }
 
         /* Navigation arrows */
@@ -155,8 +76,6 @@
             cursor: pointer;
             z-index: 100;
             opacity: 0;
-            -webkit-transition: opacity 0.3s;
-            transition: opacity 0.3s;
         }
 
         .nav-arrow:hover {
@@ -193,8 +112,6 @@
             height: 3px;
             background: var(--primary-color, #f5deb3);
             z-index: 100;
-            -webkit-transition: width 0.1s linear;
-            transition: width 0.1s linear;
         }
 
         /* Bottom left - Clock and date */
@@ -412,8 +329,6 @@
             cursor: pointer;
             z-index: 100;
             opacity: 0;
-            -webkit-transition: opacity 0.3s;
-            transition: opacity 0.3s;
         }
 
         #settings-btn:hover {
@@ -479,8 +394,6 @@
             background: #333;
             border-radius: 12px;
             cursor: pointer;
-            -webkit-transition: background 0.3s;
-            transition: background 0.3s;
         }
 
         .settings-toggle.on {
@@ -496,8 +409,6 @@
             height: 20px;
             background: #fff;
             border-radius: 50%;
-            -webkit-transition: transform 0.3s;
-            transition: transform 0.3s;
         }
 
         .settings-toggle.on::after {
@@ -542,18 +453,6 @@
         <div class="settings-item">
             <span>Embaralhar</span>
             <div class="settings-toggle" id="toggle-shuffle" onclick="toggleSetting('shuffle')"></div>
-        </div>
-        <div class="settings-item">
-            <span>Zoom (Ken Burns)</span>
-            <div class="settings-toggle" id="toggle-zoom" onclick="toggleSetting('zoom')"></div>
-        </div>
-        <div class="settings-item">
-            <span>Pan</span>
-            <div class="settings-toggle" id="toggle-pan" onclick="toggleSetting('pan')"></div>
-        </div>
-        <div class="settings-item">
-            <span>Preencher tela</span>
-            <div class="settings-toggle" id="toggle-fill" onclick="toggleSetting('fill')"></div>
         </div>
         <div class="settings-item">
             <span>Relógio</span>
@@ -635,9 +534,6 @@
         // Local settings (saved to localStorage)
         var localSettings = {
             shuffle: true,
-            zoom: false,
-            pan: false,
-            fill: false,
             clock: true,
             progress: true
         };
@@ -665,17 +561,11 @@
         function applyLocalSettings() {
             // Apply to config
             config.shuffle = localSettings.shuffle;
-            config.imageZoom = localSettings.zoom;
-            config.imagePan = localSettings.pan;
-            config.imageFill = localSettings.fill;
             config.showClock = localSettings.clock;
             config.showProgressBar = localSettings.progress;
 
             // Update toggle UI
             updateToggleUI("toggle-shuffle", localSettings.shuffle);
-            updateToggleUI("toggle-zoom", localSettings.zoom);
-            updateToggleUI("toggle-pan", localSettings.pan);
-            updateToggleUI("toggle-fill", localSettings.fill);
             updateToggleUI("toggle-clock", localSettings.clock);
             updateToggleUI("toggle-progress", localSettings.progress);
 
@@ -909,9 +799,6 @@
             if (config.baseFontSize) {
                 root.style.setProperty("--base-font-size", config.baseFontSize);
             }
-            if (config.transition !== undefined) {
-                root.style.setProperty("--transition-duration", config.transition + "s");
-            }
 
             if (!config.showProgressBar) {
                 progressBar.style.display = "none";
@@ -996,7 +883,6 @@
         }
 
         function stopProgress() {
-            progressBar.style.transition = "none";
             progressBar.style.width = "0%";
         }
 
@@ -1030,18 +916,7 @@
             if (!imgEl) { return; }
 
             imgEl.onload = function () {
-                var classes = ["active"];
-                if (config.imageFill) {
-                    classes.push("fill");
-                }
-                if (config.imageZoom) {
-                    classes.push(Math.random() > 0.5 ? "zoom-in" : "zoom-out");
-                }
-                if (config.imagePan) {
-                    var pans = ["pan-left", "pan-right", "pan-up", "pan-down"];
-                    classes.push(pans[Math.floor(Math.random() * pans.length)]);
-                }
-                imgEl.className = classes.join(" ");
+                imgEl.className = "active";
                 isTransitioning = false;
                 updateInfo(asset);
                 startProgress();
