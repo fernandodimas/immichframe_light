@@ -527,7 +527,7 @@
         var progressInterval = null;
         var progressWidth = 0;
         // slideInterval removed - using intervals.slide
-        var serverTimeOffset = 0;
+        var serverTimeOffset = null;
         var nightModeInterval = null;
         var intervals = {};
 
@@ -618,7 +618,12 @@
             if (!config.nightMode) return false;
 
             var now = getServerTime();
-            var currentMinutes = now.getHours() * 60 + now.getMinutes();
+            var currentMinutes;
+            if (serverTimeOffset !== null) {
+                currentMinutes = now.getUTCHours() * 60 + now.getUTCMinutes();
+            } else {
+                currentMinutes = now.getHours() * 60 + now.getMinutes();
+            }
 
             var startParts = (config.nightModeStart || "22:00").split(":");
             var startMinutes = parseInt(startParts[0], 10) * 60 + parseInt(startParts[1], 10);
@@ -658,9 +663,16 @@
                 if (xhr.readyState === 4 && xhr.status === 200) {
                     try {
                         var data = JSON.parse(xhr.responseText);
-                        var serverNow = new Date(data.timestamp);
-                        var deviceNow = new Date();
-                        serverTimeOffset = serverNow.getTime() - deviceNow.getTime();
+                        if (typeof data.year === "number" && typeof data.month === "number" && typeof data.day === "number") {
+                            // Converte a data/hora configurada no servidor em um timestamp UTC virtual.
+                            // Isso desacopla totalmente a exibição do relógio de qualquer fuso horário
+                            // ou horário de verão desatualizado do dispositivo cliente (ex: iPad iOS 9.3.5).
+                            var targetMs = Date.UTC(data.year, data.month - 1, data.day, data.hour, data.minute, data.second || 0);
+                            var clientNow = (new Date()).getTime();
+                            serverTimeOffset = targetMs - clientNow;
+                            updateClock();
+                            updateNightMode();
+                        }
                     } catch (e) {}
                 }
             };
@@ -670,7 +682,11 @@
         }
 
         function getServerTime() {
-            return new Date(Date.now() + serverTimeOffset);
+            var clientMs = (new Date()).getTime();
+            if (serverTimeOffset !== null) {
+                return new Date(clientMs + serverTimeOffset);
+            }
+            return new Date(clientMs);
         }
 
         function fetchWeather() {
@@ -760,9 +776,23 @@
             if (clockDateEl) clockDateEl.style.display = "";
 
             var now = getServerTime();
-            var h = padZero(now.getHours());
-            var m = padZero(now.getMinutes());
-            var s = padZero(now.getSeconds());
+            var h, m, s, dayIdx, dateNum, monthIdx;
+
+            if (serverTimeOffset !== null) {
+                h = padZero(now.getUTCHours());
+                m = padZero(now.getUTCMinutes());
+                s = padZero(now.getUTCSeconds());
+                dayIdx = now.getUTCDay();
+                dateNum = now.getUTCDate();
+                monthIdx = now.getUTCMonth();
+            } else {
+                h = padZero(now.getHours());
+                m = padZero(now.getMinutes());
+                s = padZero(now.getSeconds());
+                dayIdx = now.getDay();
+                dateNum = now.getDate();
+                monthIdx = now.getMonth();
+            }
 
             var clockText = config.clockFormat || "HH:mm";
             clockText = clockText.replace("HH", h).replace("mm", m).replace("ss", s);
@@ -783,7 +813,7 @@
                               "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
                     de = " ";
                 }
-                clockDateEl.innerHTML = days[now.getDay()] + ", " + now.getDate() + de + months[now.getMonth()];
+                clockDateEl.innerHTML = days[dayIdx] + ", " + dateNum + de + months[monthIdx];
             }
         }
 

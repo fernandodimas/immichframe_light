@@ -103,6 +103,43 @@ NIGHT_MODE_END = os.environ.get("NIGHT_MODE_END", "07:00")
 # Timezone settings (e.g., -3 for Brasilia, UTC-3, America/Sao_Paulo)
 TIMEZONE = os.environ.get("TIMEZONE", "")
 
+
+def get_configured_timezone():
+    """Return configured tzinfo or local timezone."""
+    tz_str = (TIMEZONE or "").strip()
+    if not tz_str:
+        return datetime.now().astimezone().tzinfo
+
+    upper_tz = tz_str.upper()
+    if upper_tz.startswith("UTC") or upper_tz.startswith("GMT"):
+        tz_str = tz_str[3:].strip()
+
+    # Try numeric like -3, +3, -3.5, 3
+    try:
+        hours = float(tz_str)
+        return timezone(timedelta(hours=hours))
+    except ValueError:
+        pass
+
+    # Try ISO offset like -03:00 or +05:30
+    if ":" in tz_str and (tz_str.startswith("-") or tz_str.startswith("+")):
+        parts = tz_str.split(":")
+        try:
+            sign = -1 if parts[0].startswith("-") else 1
+            h = abs(int(parts[0]))
+            m = int(parts[1])
+            return timezone(sign * timedelta(hours=h, minutes=m))
+        except ValueError:
+            pass
+
+    # Try named timezone like "America/Sao_Paulo"
+    try:
+        import zoneinfo
+        return zoneinfo.ZoneInfo(tz_str)
+    except Exception as exc:
+        logger.warning("Could not parse timezone '%s': %s. Falling back to server timezone.", tz_str, exc)
+        return datetime.now().astimezone().tzinfo
+
 logger.info("IMMICH_URL: %s", IMMICH_URL)
 logger.info("IMMICH_ALBUM_ID: %s", IMMICH_ALBUM_ID or "NOT SET")
 logger.info("INTERVAL: %ds, TRANSITION: %.1fs, SHUFFLE: %s", INTERVAL_SECONDS, TRANSITION_DURATION, SHUFFLE)
@@ -244,6 +281,7 @@ def api_slideshow():
         "nightMode": NIGHT_MODE,
         "nightModeStart": NIGHT_MODE_START,
         "nightModeEnd": NIGHT_MODE_END,
+        "timezone": TIMEZONE,
     }
     return jsonify({"assets": assets, "config": config})
 
@@ -346,23 +384,8 @@ def api_debug():
 @app.route("/api/time")
 def api_time():
     """Return current server time with timezone."""
-    now = datetime.now(timezone.utc)
-
-    # Apply timezone offset if configured
-    if TIMEZONE:
-        try:
-            # Try numeric offset like "-3" or "3"
-            offset_hours = int(TIMEZONE)
-            tz = timezone(timedelta(hours=offset_hours))
-            now = now.astimezone(tz)
-        except ValueError:
-            # Try named timezone like "America/Sao_Paulo"
-            try:
-                import zoneinfo
-                tz = zoneinfo.ZoneInfo(TIMEZONE)
-                now = now.astimezone(tz)
-            except Exception:
-                pass
+    tz = get_configured_timezone()
+    now = datetime.now(timezone.utc).astimezone(tz)
 
     return jsonify({
         "timestamp": now.isoformat(),
@@ -373,6 +396,7 @@ def api_time():
         "month": now.month,
         "year": now.year,
         "weekday": now.weekday(),
+        "timezone": TIMEZONE or str(tz),
     })
 
 
