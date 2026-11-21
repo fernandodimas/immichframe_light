@@ -397,6 +397,23 @@
             z-index: -1;
         }
 
+        /* Software brightness dimmer.
+           z-index 90 dims photos/clock/weather/info (50) but keeps the gear,
+           arrows and progress bar (100), settings menu (200), night overlay
+           (9999) and error overlay (10000) fully readable. */
+        #dimmer-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #000;
+            pointer-events: none;
+            z-index: 90;
+            opacity: 0;
+            display: none;
+        }
+
         /* Night mode overlay */
         #night-overlay {
             position: fixed;
@@ -538,6 +555,39 @@
             -webkit-transform: translateX(20px);
             transform: translateX(20px);
         }
+
+        /* Brightness touch controls */
+        .brightness-control {
+            display: -webkit-flex;
+            display: flex;
+            -webkit-align-items: center;
+            align-items: center;
+        }
+
+        .brightness-btn {
+            width: 28px;
+            height: 24px;
+            line-height: 22px;
+            padding: 0;
+            text-align: center;
+            font-family: Helvetica, Arial, sans-serif;
+            font-size: 16px;
+            background-color: transparent;
+            color: {{ primary_color|default('#f5deb3') }};
+            border: 1px solid {{ primary_color|default('#f5deb3') }};
+            border-radius: 4px;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        #brightness-value {
+            display: inline-block;
+            min-width: 46px;
+            text-align: center;
+            font-family: Helvetica, Arial, sans-serif;
+            font-size: 14px;
+            color: {{ primary_color|default('#f5deb3') }};
+        }
     </style>
 </head>
 <body>
@@ -545,6 +595,9 @@
     <video id="keep-awake" loop muted playsinline>
         <source src="data:video/mp4;base64,AAAAIGZ0eXBpc29tAAACAGlzb21pc28yYXZjMW1wNDEAAAAIZnJlZQAAAAhtZGF0AAAA1m1vb3YAAABsbXZoZAAAAAAAAAAAAAAAAAAAA+gAAAAAAAEAAAEAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIAAABidWR0YQAAAFptZGF0AAAAO91tbHVjAAAAAAAAABEAAAMAAAAsAAAAFHNtaGQAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAQAAAAEAAAEAAAAAAAwAAAABgJJRHZkb3ZtZGFyAAACMgYVVMRvQiEz/8AAAD/AAAAZx1mLBxtdmhkAAAAAAAAAAAAAAAAAAAAPAAAAD8AAQAAAQAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAACFpb2RzAAAAABCAgIAHFP///v7/AAAAAAJNdHJhawAAAFx0a2hkAAAAA91tbHVjAAAAAAAAABEAAAMAAAAsAAAAAWFtZGF0AAAAAREAAQAoAAEABQoQaZLWiFBEAAAFhAAAAAAAABRkbWRpYQAAACBkcmVmAAAAAAAAAAEAAAAMdXJsIAAAAAEAAAETc3RibAAAAGdzdHNkAAAAAAAAAAEAAABXbXA0YQAAAAAAAAABAAAAAAAAAAAAAgAQAAAAAACnAAAAAAAAACNlc2RzAAAAAAOfgICAFUAVAAAD6gAAAARtdmhkAAAAAAAAAAAAAAAAAAC8AAAAAAEAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQag==" type="video/mp4">
     </video>
+
+    <!-- Software brightness dimmer (below UI controls, above photos/info) -->
+    <div id="dimmer-overlay"></div>
 
     <!-- Night mode overlay -->
     <div id="night-overlay"></div>
@@ -596,6 +649,14 @@
         <div class="settings-item">
             <span>Pausar</span>
             <div class="settings-toggle" id="toggle-pause" onclick="toggleSetting('pause')"></div>
+        </div>
+        <div class="settings-item">
+            <span>Brilho</span>
+            <div class="brightness-control">
+                <button type="button" class="brightness-btn" onclick="adjustBrightness(-10)">-</button>
+                <span id="brightness-value">100%</span>
+                <button type="button" class="brightness-btn" onclick="adjustBrightness(10)">+</button>
+            </div>
         </div>
     </div>
 
@@ -675,6 +736,8 @@
         var pauseIndicator = document.getElementById("pause-indicator");
         var memoryBadge = document.getElementById("memory-badge");
         var nightOverlay = document.getElementById("night-overlay");
+        var dimmerOverlay = document.getElementById("dimmer-overlay");
+        var brightnessValue = document.getElementById("brightness-value");
         var settingsMenu = document.getElementById("settings-menu");
         var errorOverlay = document.getElementById("error-overlay");
         var weatherWrap = document.getElementById("weather-icon-wrap");
@@ -701,6 +764,7 @@
         var displayAsset = null;
         var displayAsset2 = null;
         var lastWeatherIcon = "01d";
+        var currentBrightness = 100;
 
         // Local settings: initialized from the server config, then merged with
         // only the keys explicitly saved in localStorage.
@@ -809,6 +873,78 @@
         // ---- Clock helpers (UTC based fix — DO NOT change) ----
         function padZero(n) {
             return n < 10 ? "0" + n : "" + n;
+        }
+
+        // ---- Software brightness dimmer ----
+        // opacity = (100 - levelPercent) / 100. The overlay is hidden at 100%.
+        function applyDimmer(levelPercent) {
+            if (!dimmerOverlay) return;
+            if (levelPercent >= 100) {
+                dimmerOverlay.style.display = "none";
+                dimmerOverlay.style.opacity = "0";
+            } else {
+                var opacity = (100 - levelPercent) / 100;
+                dimmerOverlay.style.display = "block";
+                dimmerOverlay.style.opacity = String(opacity);
+            }
+        }
+
+        function clampBrightness(value) {
+            value = parseInt(value, 10);
+            if (isNaN(value)) return 100;
+            if (value < 10) return 10;
+            if (value > 100) return 100;
+            return value;
+        }
+
+        function updateBrightnessUI() {
+            if (brightnessValue) brightnessValue.innerHTML = currentBrightness + "%";
+        }
+
+        // Start from the server-configured value; a manual adjustment saved in
+        // localStorage takes precedence so the user's choice survives reloads.
+        function initBrightness() {
+            currentBrightness = clampBrightness(config.brightness);
+            try {
+                var stored = localStorage.getItem("brightness");
+                if (stored !== null) {
+                    var v = parseInt(stored, 10);
+                    if (!isNaN(v) && v >= 10 && v <= 100) {
+                        currentBrightness = v;
+                    }
+                }
+            } catch (e) {}
+            updateBrightnessUI();
+        }
+
+        // Touch controls: adjust in steps of 10 between 10 and 100. Only a
+        // manual adjustment is persisted to localStorage.
+        window.adjustBrightness = function (delta) {
+            currentBrightness = clampBrightness(currentBrightness + delta);
+            try {
+                localStorage.setItem("brightness", String(currentBrightness));
+            } catch (e) {}
+            updateBrightnessUI();
+            updateNightMode();
+        };
+
+        // True when night mode is active but still showing a dimmed slideshow.
+        function nightModeDimmed() {
+            if (!isNightMode()) return false;
+            // 0 means full black overlay; any value above 0 keeps the
+            // slideshow running with the software dimmer applied.
+            var raw = parseInt(config.nightModeBrightness, 10);
+            if (isNaN(raw)) raw = 0;
+            return raw > 0;
+        }
+
+        // Resume timers only when the user has not manually paused the frame.
+        function resumeSlideshowIfActive() {
+            if (!isPaused && !intervals.slide && !intervals.slideResume &&
+                assets.length > 0 && !isTransitioning) {
+                startSlideTimer();
+                if (!intervals.progress) startProgress();
+            }
         }
 
         function isNightMode() {
@@ -1304,7 +1440,7 @@
 
         function startSlideTimer(delayMs) {
             clearSlideTimer();
-            if (isPaused || isNightMode() || assets.length === 0) return;
+            if (isPaused || (isNightMode() && !nightModeDimmed()) || assets.length === 0) return;
 
             var duration = (config.interval || 20) * 1000;
             if (delayMs && delayMs > 50) {
@@ -1365,15 +1501,22 @@
 
         function updateNightMode() {
             if (isNightMode()) {
-                nightOverlay.className = "active";
-                stopProgress();
-                clearSlideTimer();
+                if (nightModeDimmed()) {
+                    // Keep the slideshow visible, just dimmed to the configured level.
+                    nightOverlay.className = "";
+                    applyDimmer(parseInt(config.nightModeBrightness, 10));
+                    resumeSlideshowIfActive();
+                } else {
+                    // Original behaviour: full black screen and paused slideshow.
+                    nightOverlay.className = "active";
+                    applyDimmer(100); // hide the dimmer under the black overlay
+                    stopProgress();
+                    clearSlideTimer();
+                }
             } else {
                 nightOverlay.className = "";
-                if (!intervals.slide && !intervals.slideResume && assets.length > 0 && !isTransitioning) {
-                    startSlideTimer();
-                    if (!intervals.progress) startProgress();
-                }
+                applyDimmer(currentBrightness);
+                resumeSlideshowIfActive();
             }
         }
 
@@ -1482,7 +1625,7 @@
             updateInfo(asset, asset2);
             maybeFetchDetails(asset);
             if (asset2) maybeFetchDetails(asset2);
-            if (!isPaused && !isNightMode()) {
+            if (!isPaused && (!isNightMode() || nightModeDimmed())) {
                 startProgress();
                 startSlideTimer();
             }
@@ -1854,12 +1997,13 @@
                 config = data.config || {};
 
                 initLocalSettings();
+                initBrightness();
                 prepareAssets();
                 applyLocalSettings();
                 applyConfig();
                 updatePauseUI();
                 updateNightMode();
-                if (!isNightMode()) startSlideshow();
+                if (!isNightMode() || nightModeDimmed()) startSlideshow();
             });
         }
 

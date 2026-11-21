@@ -61,6 +61,8 @@ SHOW_PEOPLE_DESC = os.environ.get("SHOW_PEOPLE_DESC", "true").lower() in ("true"
 SHOW_ALBUM_NAME = os.environ.get("SHOW_ALBUM_NAME", "true").lower() in ("true", "1", "yes")
 SHOW_IMAGE_LOCATION = os.environ.get("SHOW_IMAGE_LOCATION", "true").lower() in ("true", "1", "yes")
 LANGUAGE = os.environ.get("LANGUAGE", "pt")
+# Software brightness dimmer (clamped to 10-100 for safe touch adjustment)
+BRIGHTNESS = max(10, min(100, int(os.environ.get("BRIGHTNESS", "100"))))
 
 # Memory / layout settings
 SHOW_MEMORIES = os.environ.get("SHOW_MEMORIES", "true").lower() in ("true", "1", "yes")
@@ -94,6 +96,8 @@ WEATHER_CACHE_TTL = 900  # 15 minutes
 NIGHT_MODE = os.environ.get("NIGHT_MODE", "false").lower() in ("true", "1", "yes")
 NIGHT_MODE_START = os.environ.get("NIGHT_MODE_START", "22:00")
 NIGHT_MODE_END = os.environ.get("NIGHT_MODE_END", "07:00")
+# 0 = full black overlay + paused slideshow; 1-100 = keep slideshow running dimmed
+NIGHT_MODE_BRIGHTNESS = max(0, min(100, int(os.environ.get("NIGHT_MODE_BRIGHTNESS", "0"))))
 
 # Timezone settings (e.g., -3 for Brasilia, UTC-3, America/Sao_Paulo)
 TIMEZONE = os.environ.get("TIMEZONE", "")
@@ -462,6 +466,8 @@ def api_slideshow():
         "nightMode": NIGHT_MODE,
         "nightModeStart": NIGHT_MODE_START,
         "nightModeEnd": NIGHT_MODE_END,
+        "brightness": BRIGHTNESS,
+        "nightModeBrightness": NIGHT_MODE_BRIGHTNESS,
         "timezone": TIMEZONE,
         "showWeatherDescription": SHOW_WEATHER_DESCRIPTION,
         "showWeatherExtended": SHOW_WEATHER_EXTENDED,

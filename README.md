@@ -100,10 +100,12 @@ services:
       - SHOW_WEATHER_DESCRIPTION=true
       - SHOW_WEATHER_EXTENDED=true
 
-      # Night mode
+      # Night mode / brightness
       - NIGHT_MODE=false
       - NIGHT_MODE_START=22:00
       - NIGHT_MODE_END=07:00
+      - BRIGHTNESS=100
+      - NIGHT_MODE_BRIGHTNESS=0
 
       # Timezone
       - TIMEZONE=-3
@@ -149,6 +151,7 @@ services:
 | `SHOW_ALBUM_NAME` | Display album name | `true` |
 | `SHOW_IMAGE_LOCATION` | Display photo location | `true` |
 | `LANGUAGE` | Language for dates and UI (`pt`, `en`, `es`, `fr`, `de`) | `pt` |
+| `BRIGHTNESS` | Software brightness level (10-100). Can also be changed from the settings menu | `100` |
 
 ### Memories / Layout
 
@@ -207,6 +210,10 @@ services:
 | `NIGHT_MODE` | Enable night mode (black screen) | `false` |
 | `NIGHT_MODE_START` | Start time (HH:mm) | `22:00` |
 | `NIGHT_MODE_END` | End time (HH:mm) | `07:00` |
+| `NIGHT_MODE_BRIGHTNESS` | Night-mode brightness (0-100). `0` keeps the original black screen + paused slideshow; `1-100` keeps the slideshow running with a software dimmer | `0` |
+
+- `BRIGHTNESS` sets the software dimmer used outside night mode. The frame's screen backlight is not changed — a black overlay reduces perceived brightness. Use the **Brilho** `-` / `+` buttons in the settings menu to adjust it on the device; manual changes are saved in the browser and survive reloads.
+- With `NIGHT_MODE_BRIGHTNESS=0`, night mode behaves as before: full black screen, slideshow and progress bar paused. With a value above `0`, the night overlay is disabled and the slideshow keeps running at that brightness.
 
 ### Timezone
 

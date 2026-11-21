@@ -63,10 +63,12 @@ services:
       - SHOW_WEATHER_DESCRIPTION=true
       - SHOW_WEATHER_EXTENDED=true    # Show min/max and feels-like temperatures
 
-      # === NIGHT MODE ===
+      # === NIGHT MODE / BRIGHTNESS ===
       - NIGHT_MODE=false          # Enable night mode (black screen)
       - NIGHT_MODE_START=22:00    # Start time (HH:mm)
       - NIGHT_MODE_END=07:00      # End time (HH:mm)
+      - BRIGHTNESS=100            # Software brightness level (10-100, default 100)
+      - NIGHT_MODE_BRIGHTNESS=0   # 0 = black screen + pause; 1-100 = keep slideshow running dimmed
 
       # === TIMEZONE ===
       - TIMEZONE=-3               # UTC offset (e.g., -3 for Brasilia, -5 for New York)
