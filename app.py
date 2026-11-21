@@ -268,20 +268,33 @@ def build_location(exif):
     return ", ".join(parts)
 
 
-def compute_is_portrait(exif):
+def compute_is_portrait(exif, asset=None):
     """Return True/False for portrait orientation, or None when unknown."""
     exif = exif or {}
-    try:
-        width = int(exif.get("exifImageWidth") or 0)
-        height = int(exif.get("exifImageHeight") or 0)
-    except (TypeError, ValueError):
-        return None
+    asset = asset or {}
+
+    def _to_int(value):
+        try:
+            return int(value or 0)
+        except (TypeError, ValueError):
+            return 0
+
+    width = _to_int(exif.get("exifImageWidth"))
+    height = _to_int(exif.get("exifImageHeight"))
+
+    # Fall back to dimensions on the asset itself, then to plain exif keys.
+    if not width or not height:
+        width = _to_int(asset.get("width") or exif.get("width"))
+        height = _to_int(asset.get("height") or exif.get("height"))
 
     if not width or not height:
         return None
 
+    # Rotated 90/270 shots need their dimensions swapped before comparing.
+    # Immich reports the numeric EXIF codes 5-8, while some backends send
+    # descriptive strings such as "Rotate 90 CW" / "Rotate 270 CW".
     orientation = str(exif.get("orientation", ""))
-    if orientation in ("5", "6", "7", "8"):
+    if orientation in ("5", "6", "7", "8") or "90" in orientation or "270" in orientation:
         width, height = height, width
 
     return height > width
@@ -395,7 +408,7 @@ def fetch_album_assets():
                            if p.get("name", "").strip()],
                 "location": build_location(exif),
                 "albumName": album_name,
-                "isPortrait": compute_is_portrait(exif),
+                "isPortrait": compute_is_portrait(exif, asset),
                 "isMemory": is_memory,
                 "yearsAgo": years_ago,
             }

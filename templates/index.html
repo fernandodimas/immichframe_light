@@ -191,7 +191,8 @@
             font-weight: 400;
             letter-spacing: 1px;
             text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9);
-            margin-bottom: 4px;
+            margin-top: 4px;
+            margin-bottom: 0;
             white-space: nowrap;
         }
 
@@ -201,6 +202,7 @@
             font-size: 64px;
             font-weight: 700;
             letter-spacing: 2px;
+            line-height: 1;
             text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9);
         }
 
@@ -211,7 +213,8 @@
             font-size: 16px;
             font-weight: 400;
             text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9);
-            margin-top: 12px;
+            margin-top: 0;
+            margin-bottom: 10px;
             display: none;
             -webkit-flex-direction: row;
             flex-direction: row;
@@ -614,8 +617,6 @@
 
     <!-- Bottom left - Clock and date -->
     <div id="bottom-left">
-        <div id="clock-date"></div>
-        <div id="clock"></div>
         <div id="weather">
             <div id="weather-icon-wrap"></div>
             <div id="weather-info">
@@ -624,6 +625,8 @@
                 <div id="weather-minmax"></div>
             </div>
         </div>
+        <div id="clock"></div>
+        <div id="clock-date"></div>
     </div>
 
     <!-- Bottom right - Photo info -->
@@ -1455,7 +1458,10 @@
             }
 
             img.onload = function () {
-                if (asset && asset.isPortrait === undefined && img.naturalWidth && img.naturalHeight) {
+                // Always refresh the orientation from the decoded thumbnail: null
+                // (unknown) must be updated just like undefined, otherwise split
+                // portraits silently degrade to single slides.
+                if (asset && img.naturalWidth && img.naturalHeight) {
                     asset.isPortrait = img.naturalWidth < img.naturalHeight;
                 }
                 finish(true);
@@ -1495,40 +1501,133 @@
                 onImageDisplayed(asset, null);
             }
 
-            imgSingle.onload = done;
-            imgSingle.onerror = function () {
+            function failed() {
+                if (fired) return;
+                fired = true;
                 isTransitioning = false;
                 advanceToNext();
-            };
+            }
+
+            imgSingle.onload = done;
+            imgSingle.onerror = failed;
             imgSingle.src = url;
+            // On iOS 9 a cached image can already be complete before the load
+            // event is delivered (or delivered at all). Handle it explicitly.
+            if (imgSingle.complete && imgSingle.naturalWidth) done();
         }
 
         function showSplit(urlA, urlB, assetA, assetB) {
             stepSize = 2;
             imgSingle.className = "slide-img";
             splitContainer.className = "active";
-            var loaded = 0;
-            var fired = false;
+            var firedLeft = false;
+            var firedRight = false;
+            var displayed = false;
+            var failed = false;
 
-            function oneLoaded() {
-                loaded++;
-                if (loaded >= 2 && !fired) {
-                    fired = true;
-                    onImageDisplayed(assetA, assetB);
-                }
+            function maybeDone() {
+                if (failed || displayed || !firedLeft || !firedRight) return;
+                displayed = true;
+                onImageDisplayed(assetA, assetB);
             }
 
-            imgLeft.onerror = function () { isTransitioning = false; advanceToNext(); };
-            imgRight.onerror = function () { isTransitioning = false; advanceToNext(); };
-            imgLeft.onload = oneLoaded;
-            imgRight.onload = oneLoaded;
+            function onError() {
+                if (failed || displayed) return;
+                failed = true;
+                isTransitioning = false;
+                advanceToNext();
+            }
+
+            function markLeft() {
+                if (firedLeft || failed || displayed) return;
+                firedLeft = true;
+                maybeDone();
+            }
+            function markRight() {
+                if (firedRight || failed || displayed) return;
+                firedRight = true;
+                maybeDone();
+            }
+
+            imgLeft.onerror = onError;
+            imgRight.onerror = onError;
+            imgLeft.onload = markLeft;
+            imgRight.onload = markRight;
             imgLeft.src = urlA;
             imgRight.src = urlB;
+            // Cached images may be complete before load handlers fire on iOS 9.
+            if (imgLeft.complete && imgLeft.naturalWidth) markLeft();
+            if (imgRight.complete && imgRight.naturalWidth) markRight();
+        }
+
+        // Find (and swap in) a portrait partner for the current slide. Prefers a
+        // known portrait; falls back to an unknown (null) asset if none exists.
+        // Search wraps around but never returns to currentIndex itself.
+        function findPortraitPartnerPos() {
+            if (!assets || assets.length < 2) return -1;
+            var fallbackPos = -1;
+            var i;
+            for (i = 1; i < assets.length; i++) {
+                var pos = (currentIndex + i) % assets.length;
+                if (pos === currentIndex) continue;
+                var candidate = assets[pos];
+                if (!candidate) continue;
+                if (candidate.isPortrait === true) return pos;
+                if (candidate.isPortrait == null && fallbackPos < 0) fallbackPos = pos;
+            }
+            return fallbackPos;
+        }
+
+        function swapIntoNextPos(pos) {
+            var nextPos = (currentIndex + 1) % assets.length;
+            if (pos < 0 || pos === nextPos) return nextPos;
+            var tmp = assets[nextPos];
+            assets[nextPos] = assets[pos];
+            assets[pos] = tmp;
+            return nextPos;
+        }
+
+        // Used by goToIndex/startSlideshow: a known portrait must be followed by
+        // another portrait so the split view can kick in immediately.
+        function ensurePortraitPartner() {
+            if (config.splitPortrait === false || assets.length < 2) return;
+            var current = assets[currentIndex];
+            var next = getAssetAt(currentIndex + 1);
+            if (!current || current.isPortrait !== true || !next || next.isPortrait !== false) {
+                return;
+            }
+            swapIntoNextPos(findPortraitPartnerPos());
+        }
+
+        // Used after preloadURL reveals that a previously unknown asset is a
+        // portrait: look for another portrait and preload it for a split view.
+        function trySplitWithDiscoveredPortrait(url, asset) {
+            var partnerPos = findPortraitPartnerPos();
+            if (partnerPos < 0) {
+                showSingle(url, asset);
+                return;
+            }
+            var nextPos = swapIntoNextPos(partnerPos);
+            var partner = assets[nextPos];
+            if (!partner || partner === asset) {
+                showSingle(url, asset);
+                return;
+            }
+            var partnerUrl = getThumbUrl(partner.id);
+            preloadURL(partnerUrl, partner, function (ok) {
+                if (ok && asset.isPortrait === true &&
+                    (partner.isPortrait === true || partner.isPortrait == null)) {
+                    showSplit(url, partnerUrl, asset, partner);
+                } else {
+                    showSingle(url, asset);
+                }
+            });
         }
 
         function preloadAndShow(url, asset, nextUrl, nextAsset) {
             cleanupPreloaders();
 
+            var initialPortrait = asset.isPortrait;
             var splitCandidate = window.innerWidth > window.innerHeight &&
                                  config.splitPortrait !== false && assets.length > 1 &&
                                  asset.isPortrait !== false;
@@ -1538,6 +1637,13 @@
                     if (!ok) {
                         isTransitioning = false;
                         advanceToNext();
+                        return;
+                    }
+                    // The decoded thumbnail may reveal a portrait that was unknown.
+                    if (initialPortrait == null && asset.isPortrait === true &&
+                        config.splitPortrait !== false && assets.length > 1 &&
+                        window.innerWidth > window.innerHeight) {
+                        trySplitWithDiscoveredPortrait(url, asset);
                         return;
                     }
                     showSingle(url, asset);
@@ -1562,6 +1668,12 @@
                     advanceToNext();
                     return;
                 }
+                // A null (unknown) asset can become a known portrait during preload.
+                // If its neighbour is landscape, find another portrait to pair with.
+                if (asset.isPortrait === true && nextAsset.isPortrait === false) {
+                    trySplitWithDiscoveredPortrait(url, asset);
+                    return;
+                }
                 var bothPortrait = asset.isPortrait === true && nextAsset.isPortrait === true;
                 if (bothPortrait && okB) {
                     showSplit(url, nextUrl, asset, nextAsset);
@@ -1582,6 +1694,8 @@
             currentIndex = index % assets.length;
             if (currentIndex < 0) currentIndex += assets.length;
 
+            ensurePortraitPartner();
+
             var asset = assets[currentIndex];
             var nextAsset = assets.length > 1 ? getAssetAt(currentIndex + 1) : null;
             var nextUrl = nextAsset ? getThumbUrl(nextAsset.id) : null;
@@ -1595,6 +1709,8 @@
             if (assets.length === 0) return;
             isTransitioning = true;
             currentIndex = 0;
+
+            ensurePortraitPartner();
 
             var asset = assets[0];
             var nextAsset = assets.length > 1 ? getAssetAt(1) : null;
@@ -1641,20 +1757,74 @@
             }
         }
 
-        function prepareAssets() {
-            if (!config.shuffle || assets.length < 2) return;
-            if (config.prioritizeMemories) {
-                var memories = [];
-                var normal = [];
-                for (var i = 0; i < assets.length; i++) {
-                    if (assets[i].isMemory) memories.push(assets[i]);
-                    else normal.push(assets[i]);
+        // Group known portraits into adjacent pairs and interleave those pairs
+        // with landscape/unknown photos so a portrait is always followed by a
+        // partner (split view). Memory priority is preserved when active.
+        function pairPortraitAssets(list) {
+            if (!list || list.length < 2) return list;
+
+            function pairGroup(items) {
+                var portraits = [];
+                var others = [];
+                var i;
+                for (i = 0; i < items.length; i++) {
+                    if (items[i] && items[i].isPortrait === true) portraits.push(items[i]);
+                    else others.push(items[i]);
                 }
-                shuffleArray(memories);
-                shuffleArray(normal);
-                assets = memories.concat(normal);
-            } else {
-                shuffleArray(assets);
+                if (portraits.length < 2) return items;
+
+                var result = [];
+                var p = 0;
+                var o = 0;
+                while (o < others.length || p < portraits.length) {
+                    if (o < others.length) {
+                        result.push(others[o]);
+                        o++;
+                    }
+                    if (p + 1 < portraits.length) {
+                        result.push(portraits[p]);
+                        result.push(portraits[p + 1]);
+                        p += 2;
+                    } else if (p < portraits.length) {
+                        // Odd leftover: keep it attached to the pair sequence.
+                        result.push(portraits[p]);
+                        p++;
+                    }
+                }
+                return result;
+            }
+
+            if (!config.prioritizeMemories) {
+                return pairGroup(list);
+            }
+
+            var memories = [];
+            var normal = [];
+            for (var i = 0; i < list.length; i++) {
+                if (list[i] && list[i].isMemory) memories.push(list[i]);
+                else normal.push(list[i]);
+            }
+            return pairGroup(memories).concat(pairGroup(normal));
+        }
+
+        function prepareAssets() {
+            if (config.shuffle && assets.length >= 2) {
+                if (config.prioritizeMemories) {
+                    var memories = [];
+                    var normal = [];
+                    for (var i = 0; i < assets.length; i++) {
+                        if (assets[i].isMemory) memories.push(assets[i]);
+                        else normal.push(assets[i]);
+                    }
+                    shuffleArray(memories);
+                    shuffleArray(normal);
+                    assets = memories.concat(normal);
+                } else {
+                    shuffleArray(assets);
+                }
+            }
+            if (config.splitPortrait !== false) {
+                assets = pairPortraitAssets(assets);
             }
         }
 
