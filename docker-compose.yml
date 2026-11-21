@@ -11,6 +11,7 @@ services:
       # === REQUIRED ===
       - IMMICH_URL=http://192.168.16.250:2283
       - IMMICH_API_KEY=your_api_key_here
+      # Multiple albums can be separated by commas (e.g. "id1,id2")
       - IMMICH_ALBUM_ID=your_album_uuid_here
 
       # === SLIDESHOW SETTINGS ===
@@ -31,6 +32,11 @@ services:
       - SHOW_IMAGE_LOCATION=true
       - LANGUAGE=pt               # Options: pt, en, es, fr, de
 
+      # === MEMORIES / LAYOUT ===
+      - SHOW_MEMORIES=true             # Show photos taken on this day in previous years
+      - PRIORITIZE_MEMORIES=true       # Show memories first in the slideshow
+      - SPLIT_PORTRAIT=true            # Split portrait photos into two panels
+
       # === IMAGE EFFECTS ===
       - IMAGE_ZOOM=true           # Ken Burns zoom effect
       - IMAGE_PAN=false           # Pan animation
@@ -43,11 +49,19 @@ services:
       - BASE_FONT_SIZE=17px
       - IMAGE_LOCATION_FORMAT=City,State,Country
 
+      # === IMAGE RESIZING / CACHE ===
+      - RESIZE_IMAGES=true        # Resize/compress thumbnails with Pillow before serving
+      - MAX_IMAGE_WIDTH=1024      # Maximum thumbnail width (px)
+      - MAX_IMAGE_HEIGHT=768      # Maximum thumbnail height (px)
+      - IMAGE_QUALITY=82          # JPEG quality (1-100)
+      - THUMB_CACHE_SIZE=50       # Number of processed thumbnails kept in memory
+
       # === WEATHER SETTINGS ===
       - WEATHER_API_KEY=          # Get free key at https://openweathermap.org/api
       - UNIT_SYSTEM=metric        # Options: metric, imperial
       - WEATHER_LAT_LONG=40.730610,-73.935242
       - SHOW_WEATHER_DESCRIPTION=true
+      - SHOW_WEATHER_EXTENDED=true    # Show min/max and feels-like temperatures
 
       # === NIGHT MODE ===
       - NIGHT_MODE=false          # Enable night mode (black screen)

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, minimal-ui">
@@ -29,8 +29,7 @@
             width: 100%;
             height: 100%;
             overflow: hidden;
-            background-color: #000;
-            -webkit-background-color: #000;
+            background-color: {{ secondary_color|default('#000000') }};
             font-family: -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif;
         }
 
@@ -40,9 +39,11 @@
             left: 0;
             width: 100%;
             height: 100%;
+            background-color: {{ secondary_color|default('#000000') }};
         }
 
-        #current-image {
+        /* Single image (normal mode) */
+        .slide-img {
             position: absolute;
             top: 0;
             left: 0;
@@ -55,12 +56,66 @@
             -webkit-tap-highlight-color: transparent;
         }
 
-        #current-image.active {
+        .slide-img.active {
             display: block;
         }
 
-        /* Navigation arrows */
-        .nav-arrow {
+        /* Split screen (two portrait photos side by side) */
+        #split-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+            -webkit-flex-direction: row;
+            flex-direction: row;
+            -webkit-align-items: center;
+            align-items: center;
+            -webkit-justify-content: center;
+            justify-content: center;
+        }
+
+        #split-container.active {
+            display: -webkit-flex;
+            display: flex;
+        }
+
+        .split-half {
+            width: 50%;
+            height: 100%;
+            -webkit-flex: 1 1 0;
+            flex: 1 1 0;
+            display: -webkit-flex;
+            display: flex;
+            -webkit-align-items: center;
+            align-items: center;
+            -webkit-justify-content: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .split-half img {
+            max-width: 100%;
+            max-height: 100%;
+            width: auto;
+            height: auto;
+            display: block;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        #split-gap {
+            width: 4px;
+            height: 100%;
+            background-color: #000;
+            -webkit-flex-shrink: 0;
+            flex-shrink: 0;
+        }
+
+        /* Navigation arrows / pause button */
+        .nav-arrow, #nav-pause {
             position: fixed;
             top: 50%;
             -webkit-transform: translateY(-50%);
@@ -76,31 +131,32 @@
             cursor: pointer;
             z-index: 100;
             opacity: 0;
+            -webkit-tap-highlight-color: transparent;
         }
 
-        .nav-arrow:hover {
+        .nav-arrow:hover, #nav-pause:hover {
             opacity: 1 !important;
         }
 
-        #nav-prev {
-            left: 10px;
-        }
+        #nav-prev { left: 10px; }
+        #nav-next { right: 10px; }
+        #nav-pause { left: 50%; -webkit-transform: translate(-50%, -50%); transform: translate(-50%, -50%); width: 60px; }
 
-        #nav-next {
-            right: 10px;
-        }
-
-        .nav-arrow svg {
+        .nav-arrow svg, #nav-pause svg {
             width: 30px;
             height: 30px;
             fill: none;
-            stroke: var(--primary-color, #f5deb3);
+            stroke: {{ primary_color|default('#f5deb3') }};
             stroke-width: 2;
             stroke-linecap: round;
             stroke-linejoin: round;
         }
 
-        .nav-arrow:hover svg {
+        .nav-arrow:hover svg, #nav-pause:hover svg {
+            stroke: #fff;
+        }
+
+        #nav-pause.paused svg {
             stroke: #fff;
         }
 
@@ -109,8 +165,9 @@
             position: fixed;
             bottom: 0;
             left: 0;
+            width: 0%;
             height: 3px;
-            background: var(--primary-color, #f5deb3);
+            background: {{ primary_color|default('#f5deb3') }};
             z-index: 100;
         }
 
@@ -128,7 +185,7 @@
         }
 
         #clock-date {
-            color: var(--primary-color, #f5deb3);
+            color: {{ primary_color|default('#f5deb3') }};
             font-family: Helvetica, Arial, sans-serif;
             font-size: 18px;
             font-weight: 400;
@@ -139,7 +196,7 @@
         }
 
         #clock {
-            color: var(--primary-color, #f5deb3);
+            color: {{ primary_color|default('#f5deb3') }};
             font-family: Helvetica, Arial, sans-serif;
             font-size: 64px;
             font-weight: 700;
@@ -149,7 +206,7 @@
 
         /* Weather */
         #weather {
-            color: var(--primary-color, #f5deb3);
+            color: {{ primary_color|default('#f5deb3') }};
             font-family: Helvetica, Arial, sans-serif;
             font-size: 16px;
             font-weight: 400;
@@ -175,7 +232,7 @@
             flex-shrink: 0;
         }
 
-        #weather-icon {
+        #weather-icon-wrap svg {
             width: 40px;
             height: 40px;
             display: block;
@@ -197,14 +254,20 @@
             margin-top: 2px;
         }
 
+        #weather-minmax {
+            font-size: 13px;
+            opacity: 0.75;
+            margin-top: 2px;
+        }
+
         /* Bottom right - Photo info */
         #bottom-right {
             position: fixed;
             bottom: 20px;
             right: 20px;
             text-align: left;
-            color: var(--primary-color, #f5deb3);
-            font-size: var(--base-font-size, 17px);
+            color: {{ primary_color|default('#f5deb3') }};
+            font-size: {{ base_font_size|default('17px') }};
             text-shadow: 0 2px 8px rgba(0,0,0,0.9);
             z-index: 50;
             -webkit-user-select: none;
@@ -239,29 +302,85 @@
             width: 100%;
             height: 100%;
             fill: none;
-            stroke: var(--primary-color, #f5deb3);
+            stroke: {{ primary_color|default('#f5deb3') }};
             stroke-width: 2;
             stroke-linecap: round;
             stroke-linejoin: round;
         }
 
-        #info-album {
-            font-size: 1em;
-            font-weight: 400;
-        }
-
-        #info-people {
-            font-size: 1em;
-        }
-
-        #info-location {
-            font-size: 0.95em;
-            opacity: 0.9;
-        }
-
-        #info-date {
+        #info-album { font-size: 1em; font-weight: 400; }
+        #info-people { font-size: 1em; }
+        #info-location { font-size: 0.95em; opacity: 0.9; }
+        #info-date { font-size: 0.9em; opacity: 0.8; }
+        #info-desc {
             font-size: 0.9em;
-            opacity: 0.8;
+            opacity: 0.85;
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* Memory badge */
+        #memory-badge {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 60;
+            display: none;
+            background-color: rgba(0, 0, 0, 0.55);
+            border: 1px solid {{ primary_color|default('#f5deb3') }};
+            color: {{ primary_color|default('#f5deb3') }};
+            font-family: Helvetica, Arial, sans-serif;
+            font-size: 14px;
+            padding: 6px 12px;
+            border-radius: 16px;
+            text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+            pointer-events: none;
+        }
+
+        #memory-badge.active {
+            display: block;
+        }
+
+        /* Pause indicator */
+        #pause-indicator {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            -webkit-transform: translateX(-50%);
+            transform: translateX(-50%);
+            z-index: 60;
+            display: none;
+            background-color: rgba(0, 0, 0, 0.55);
+            border: 1px solid {{ primary_color|default('#f5deb3') }};
+            border-radius: 50%;
+            width: 44px;
+            height: 44px;
+            -webkit-align-items: center;
+            align-items: center;
+            -webkit-justify-content: center;
+            justify-content: center;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+            pointer-events: none;
+        }
+
+        #pause-indicator.active {
+            display: -webkit-flex;
+            display: flex;
+        }
+
+        #pause-indicator svg {
+            width: 22px;
+            height: 22px;
+            fill: none;
+            stroke: {{ primary_color|default('#f5deb3') }};
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
         }
 
         /* Keep screen awake */
@@ -313,7 +432,7 @@
         }
 
         #error-message {
-            color: #fff;
+            color: {{ primary_color|default('#f5deb3') }};
             font-family: Helvetica, Arial, sans-serif;
             font-size: 24px;
             text-align: center;
@@ -329,6 +448,7 @@
             cursor: pointer;
             z-index: 100;
             opacity: 0;
+            -webkit-tap-highlight-color: transparent;
         }
 
         #settings-btn:hover {
@@ -339,7 +459,7 @@
             width: 100%;
             height: 100%;
             fill: none;
-            stroke: var(--primary-color, #f5deb3);
+            stroke: {{ primary_color|default('#f5deb3') }};
             stroke-width: 2;
             stroke-linecap: round;
             stroke-linejoin: round;
@@ -350,8 +470,8 @@
             position: fixed;
             top: 70px;
             right: 20px;
-            background: rgba(0, 0, 0, 0.9);
-            border: 1px solid var(--primary-color, #f5deb3);
+            background-color: rgba(0, 0, 0, 0.9);
+            border: 1px solid {{ primary_color|default('#f5deb3') }};
             border-radius: 8px;
             padding: 15px;
             z-index: 200;
@@ -364,13 +484,13 @@
         }
 
         .settings-title {
-            color: var(--primary-color, #f5deb3);
+            color: {{ primary_color|default('#f5deb3') }};
             font-family: Helvetica, Arial, sans-serif;
             font-size: 16px;
             font-weight: bold;
             margin-bottom: 15px;
             text-align: center;
-            border-bottom: 1px solid var(--primary-color, #f5deb3);
+            border-bottom: 1px solid {{ primary_color|default('#f5deb3') }};
             padding-bottom: 10px;
         }
 
@@ -382,7 +502,7 @@
             -webkit-align-items: center;
             align-items: center;
             padding: 8px 0;
-            color: var(--primary-color, #f5deb3);
+            color: {{ primary_color|default('#f5deb3') }};
             font-family: Helvetica, Arial, sans-serif;
             font-size: 14px;
         }
@@ -397,7 +517,7 @@
         }
 
         .settings-toggle.on {
-            background: var(--primary-color, #f5deb3);
+            background: {{ primary_color|default('#f5deb3') }};
         }
 
         .settings-toggle::after {
@@ -420,7 +540,7 @@
 <body>
     <!-- Keep screen awake -->
     <video id="keep-awake" loop muted playsinline>
-        <source src="data:video/mp4;base64,AAAAIGZ0eXBpc29tAAACAGlzb21pc28yYXZjMW1wNDEAAAAIZnJlZQAAAAhtZGF0AAAA1m1vb3YAAABsbXZoZAAAAAAAAAAAAAAAAAAAA+gAAAAAAAEAAAEAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIAAABidWR0YQAAAFptZGF0AAAAO91tbHVjAAAAAAAAABEAAAMAAAAsAAAAFHNtaGQAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAQAAAAEAAAEAAAAAAAwAAAABgJJRHZkb3ZtZGFyAAACMgYVVMRvQiEz/8AAAD/AAAAZx1mLBxtdmhkAAAAAAAAAAAAAAAAAAAAPAAAAD8AAQAAAQAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAACFpb2RzAAAAABCAgIAHFP///v7/AAAAAAJNdHJhawAAAFx0a2hkAAAAA91tbHVjAAAAAAAAABEAAAMAAAAsAAAAAWFtZGF0AAAAAREAAQAoAAEABQoQaZLWiFBEAAAFhAAAAAAAABRkbWRpYQAAACBkcmVmAAAAAAAAAAEAAAAMdXJsIAAAAAEAAAETc3RibAAAAGdzdHNkAAAAAAAAAAEAAABXbXA0YQAAAAAAAAABAAAAAAAAAAAAAgAQAAAAAACnAAAAAAAAACNlc2RzAAAAAAOfgICAFUAVAAAD6gAAAARtdmhkAAAAAAAAAAAAAAAAAAC8AAAAAAEAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQag==" type="video/mp4">
+        <source src="data:video/mp4;base64,AAAAIGZ0eXBpc29tAAACAGlzb21pc28yYXZjMW1wNDEAAAAIZnJlZQAAAAhtZGF0AAAA1m1vb3YAAABsbXZoZAAAAAAAAAAAAAAAAAAAA+gAAAAAAAEAAAEAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIAAABidWR0YQAAAFptZGF0AAAAO91tbHVjAAAAAAAAABEAAAMAAAAsAAAAFHNtaGQAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAQAAAAEAAAEAAAAAAAwAAAABgJJRHZkb3ZtZGFyAAACMgYVVMRvQiEz/8AAAD/AAAAZx1mLBxtdmhkAAAAAAAAAAAAAAAAAAAAPAAAAD8AAQAAAQAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAACFpb2RzAAAAABCAgIAHFP///v7/AAAAAAJNdHJhawAAAFx0a2hkAAAAA91tbHVjAAAAAAAAABEAAAMAAAAsAAAAAWFtZGF0AAAAAREAAQAoAAEABQoQaZLWiFBEAAAFhAAAAAAAABRkbWRpYQAAACBkcmVmAAAAAAAAAAEAAAAMdXJsIAAAAAEAAAETc3RibAAAAGdzdHNkAAAAAAAAAAEAAABXbXA0YQAAAAAAAAABAAAAAAAAAAAAAgAQAAAAAACnAAAAAAAAACNlc2RzAAAAAAOfgICAFUAVAAAD6gAAAARtdmhkAAAAAAAAAAAAAAAAAAC8AAAAAAEAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQag==" type="video/mp4">
     </video>
 
     <!-- Night mode overlay -->
@@ -437,6 +557,14 @@
     </div>
     <div id="nav-next" class="nav-arrow" onclick="nextImage()">
         <svg viewBox="0 0 24 24"><polyline points="9 6 15 12 9 18"></polyline></svg>
+    </div>
+    <div id="nav-pause" onclick="togglePause()">
+        <svg viewBox="0 0 24 24"><line x1="8" y1="5" x2="8" y2="19"></line><line x1="16" y1="5" x2="16" y2="19"></line></svg>
+    </div>
+
+    <!-- Pause indicator -->
+    <div id="pause-indicator">
+        <svg viewBox="0 0 24 24"><line x1="8" y1="5" x2="8" y2="19"></line><line x1="16" y1="5" x2="16" y2="19"></line></svg>
     </div>
 
     <!-- Settings gear -->
@@ -462,6 +590,10 @@
             <span>Barra de progresso</span>
             <div class="settings-toggle" id="toggle-progress" onclick="toggleSetting('progress')"></div>
         </div>
+        <div class="settings-item">
+            <span>Pausar</span>
+            <div class="settings-toggle" id="toggle-pause" onclick="toggleSetting('pause')"></div>
+        </div>
     </div>
 
     <!-- Progress bar -->
@@ -469,18 +601,27 @@
 
     <!-- Slideshow -->
     <div id="slideshow">
-        <img id="current-image" alt="" draggable="false">
+        <img id="img-single" class="slide-img" alt="" draggable="false">
+        <div id="split-container">
+            <div class="split-half"><img id="img-left" alt="" draggable="false"></div>
+            <div id="split-gap"></div>
+            <div class="split-half"><img id="img-right" alt="" draggable="false"></div>
+        </div>
     </div>
+
+    <!-- Memory badge -->
+    <div id="memory-badge"></div>
 
     <!-- Bottom left - Clock and date -->
     <div id="bottom-left">
         <div id="clock-date"></div>
         <div id="clock"></div>
         <div id="weather">
-            <div id="weather-icon-wrap"><img id="weather-icon" src="/static/weather-default.png" onerror="this.style.display='none'"></div>
+            <div id="weather-icon-wrap"></div>
             <div id="weather-info">
                 <div id="weather-temp"></div>
                 <div id="weather-desc"></div>
+                <div id="weather-minmax"></div>
             </div>
         </div>
     </div>
@@ -503,11 +644,20 @@
             <div class="info-icon"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg></div>
             <div id="info-date"></div>
         </div>
+        <div class="info-row" id="info-desc-row">
+            <div class="info-icon"><svg viewBox="0 0 24 24"><line x1="4" y1="6" x2="20" y2="6"></line><line x1="4" y1="12" x2="20" y2="12"></line><line x1="4" y1="18" x2="14" y2="18"></line></svg></div>
+            <div id="info-desc"></div>
+        </div>
     </div>
 
     <script>
     (function () {
-        var imgEl = document.getElementById("current-image");
+        // ---- Element references (only ES5 DOM APIs) ----
+        var imgSingle = document.getElementById("img-single");
+        var imgLeft = document.getElementById("img-left");
+        var imgRight = document.getElementById("img-right");
+        var splitContainer = document.getElementById("split-container");
+        var slideshow = document.getElementById("slideshow");
         var clockEl = document.getElementById("clock");
         var clockDateEl = document.getElementById("clock-date");
         var progressBar = document.getElementById("progress-bar");
@@ -515,38 +665,62 @@
         var infoPeople = document.getElementById("info-people");
         var infoLocation = document.getElementById("info-location");
         var infoDate = document.getElementById("info-date");
+        var infoDesc = document.getElementById("info-desc");
         var navPrev = document.getElementById("nav-prev");
         var navNext = document.getElementById("nav-next");
+        var navPause = document.getElementById("nav-pause");
+        var pauseIndicator = document.getElementById("pause-indicator");
+        var memoryBadge = document.getElementById("memory-badge");
         var nightOverlay = document.getElementById("night-overlay");
         var settingsMenu = document.getElementById("settings-menu");
+        var errorOverlay = document.getElementById("error-overlay");
+        var weatherWrap = document.getElementById("weather-icon-wrap");
+        var weatherEl = document.getElementById("weather");
+        var weatherTemp = document.getElementById("weather-temp");
+        var weatherDesc = document.getElementById("weather-desc");
+        var weatherMinMax = document.getElementById("weather-minmax");
+
+        // Rendered theme color, supplied by Jinja2 (no CSS variables on iOS 9 SVG).
+        var themeStroke = "{{ primary_color|default('#f5deb3') }}";
 
         var assets = [];
         var config = {};
         var currentIndex = 0;
+        var stepSize = 1;
         var isTransitioning = false;
-        var progressInterval = null;
+        var isPaused = false;
+        var pausedRemainingMs = 0;
         var progressWidth = 0;
-        // slideInterval removed - using intervals.slide
         var serverTimeOffset = null;
-        var nightModeInterval = null;
         var intervals = {};
+        var navHideTimer = null;
+        var reconnectTimer = null;
+        var displayAsset = null;
+        var displayAsset2 = null;
+        var lastWeatherIcon = "01d";
 
-        // Local settings (saved to localStorage)
-        var localSettings = {
-            shuffle: true,
-            clock: true,
-            progress: true
-        };
+        // Local settings: initialized from the server config, then merged with
+        // only the keys explicitly saved in localStorage.
+        var localSettings = {};
 
-        function loadLocalSettings() {
+        function initLocalSettings() {
+            localSettings = {
+                shuffle: config.shuffle !== false,
+                clock: config.showClock !== false,
+                progress: config.showProgressBar !== false
+            };
             try {
                 var saved = localStorage.getItem("immichframe_settings");
                 if (saved) {
                     var parsed = JSON.parse(saved);
-                    for (var key in parsed) {
-                        if (parsed.hasOwnProperty(key) && localSettings.hasOwnProperty(key)) {
-                            localSettings[key] = parsed[key];
-                        }
+                    if (parsed && typeof parsed.shuffle === "boolean") {
+                        localSettings.shuffle = parsed.shuffle;
+                    }
+                    if (parsed && typeof parsed.clock === "boolean") {
+                        localSettings.clock = parsed.clock;
+                    }
+                    if (parsed && typeof parsed.progress === "boolean") {
+                        localSettings.progress = parsed.progress;
                     }
                 }
             } catch (e) {}
@@ -554,25 +728,12 @@
 
         function saveLocalSettings() {
             try {
-                localStorage.setItem("immichframe_settings", JSON.stringify(localSettings));
+                localStorage.setItem("immichframe_settings", JSON.stringify({
+                    shuffle: localSettings.shuffle,
+                    clock: localSettings.clock,
+                    progress: localSettings.progress
+                }));
             } catch (e) {}
-        }
-
-        function applyLocalSettings() {
-            // Apply to config
-            config.shuffle = localSettings.shuffle;
-            config.showClock = localSettings.clock;
-            config.showProgressBar = localSettings.progress;
-
-            // Update toggle UI
-            updateToggleUI("toggle-shuffle", localSettings.shuffle);
-            updateToggleUI("toggle-clock", localSettings.clock);
-            updateToggleUI("toggle-progress", localSettings.progress);
-
-            // Apply visual changes
-            if (clockEl) clockEl.style.display = localSettings.clock ? "" : "none";
-            if (clockDateEl) clockDateEl.style.display = localSettings.clock ? "" : "none";
-            if (progressBar) progressBar.style.display = localSettings.progress ? "" : "none";
         }
 
         function updateToggleUI(id, value) {
@@ -582,34 +743,67 @@
             }
         }
 
+        function applyLocalSettings() {
+            // Only write back to config the keys that were explicitly loaded/saved.
+            config.shuffle = localSettings.shuffle;
+            config.showClock = localSettings.clock;
+            config.showProgressBar = localSettings.progress;
+
+            updateToggleUI("toggle-shuffle", localSettings.shuffle);
+            updateToggleUI("toggle-clock", localSettings.clock);
+            updateToggleUI("toggle-progress", localSettings.progress);
+
+            if (clockEl) clockEl.style.display = localSettings.clock ? "" : "none";
+            if (clockDateEl) clockDateEl.style.display = localSettings.clock ? "" : "none";
+            if (progressBar) progressBar.style.display = localSettings.progress ? "" : "none";
+        }
+
+        function updatePauseUI() {
+            if (pauseIndicator) {
+                pauseIndicator.className = isPaused ? "active" : "";
+            }
+            if (navPause) {
+                navPause.className = isPaused ? "paused" : "";
+                var icon = isPaused
+                    ? '<polygon points="7 4 20 12 7 20" fill="' + themeStroke + '" stroke="none"></polygon>'
+                    : '<line x1="8" y1="5" x2="8" y2="19"></line><line x1="16" y1="5" x2="16" y2="19"></line>';
+                navPause.innerHTML = '<svg viewBox="0 0 24 24">' + icon + '</svg>';
+            }
+            if (pauseIndicator) {
+                var pIcon = isPaused
+                    ? '<polygon points="7 4 20 12 7 20" fill="' + themeStroke + '" stroke="none"></polygon>'
+                    : '<line x1="8" y1="5" x2="8" y2="19"></line><line x1="16" y1="5" x2="16" y2="19"></line>';
+                pauseIndicator.innerHTML = '<svg viewBox="0 0 24 24">' + pIcon + '</svg>';
+            }
+            updateToggleUI("toggle-pause", isPaused);
+        }
+
         window.toggleSettings = function () {
             settingsMenu.className = settingsMenu.className === "active" ? "" : "active";
         };
 
         window.toggleSetting = function (key) {
+            if (key === "pause") {
+                togglePause();
+                return;
+            }
             localSettings[key] = !localSettings[key];
             saveLocalSettings();
             applyLocalSettings();
 
-            // If shuffle changed, re-shuffle and restart
             if (key === "shuffle") {
-                if (localSettings.shuffle && assets.length > 1) {
-                    for (var i = assets.length - 1; i > 0; i--) {
-                        var j = Math.floor(Math.random() * (i + 1));
-                        var temp = assets[i];
-                        assets[i] = assets[j];
-                        assets[j] = temp;
-                    }
-                }
+                prepareAssets();
                 currentIndex = 0;
-                if (intervals.slide) {
-                    window.clearInterval(intervals.slide);
-                    intervals.slide = null;
-                }
-                startSlideshow();
+                closeSettingsMenu();
+                goToIndex(0);
             }
         };
 
+        function closeSettingsMenu() {
+            settingsMenu.className = "";
+        }
+
+        // ---- Clock helpers (UTC based fix — DO NOT change) ----
         function padZero(n) {
             return n < 10 ? "0" + n : "" + n;
         }
@@ -622,7 +816,7 @@
             if (serverTimeOffset !== null) {
                 currentMinutes = now.getUTCHours() * 60 + now.getUTCMinutes();
             } else {
-                currentMinutes = now.getHours() * 60 + now.getMinutes();
+                currentMinutes = (now.getHours() * 60) + now.getMinutes();
             }
 
             var startParts = (config.nightModeStart || "22:00").split(":");
@@ -638,22 +832,153 @@
             }
         }
 
-        function updateNightMode() {
-            if (isNightMode()) {
-                nightOverlay.className = "active";
-                stopProgress();
-                if (intervals.slide) {
-                    window.clearInterval(intervals.slide);
-                    intervals.slide = null;
-                }
+        function getLanguage() {
+            return config.language || "pt";
+        }
+
+        function getDateNames(lang) {
+            var days, months;
+            if (lang === "en") {
+                days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+                months = ["January", "February", "March", "April", "May", "June",
+                          "July", "August", "September", "October", "November", "December"];
+            } else if (lang === "es") {
+                days = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
+                months = ["enero", "febrero", "marzo", "abril", "mayo", "junio",
+                          "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+            } else if (lang === "fr") {
+                days = ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"];
+                months = ["janvier", "février", "mars", "avril", "mai", "juin",
+                          "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
+            } else if (lang === "de") {
+                days = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
+                months = ["Januar", "Februar", "März", "April", "Mai", "Juni",
+                          "Juli", "August", "September", "Oktober", "November", "Dezember"];
             } else {
-                nightOverlay.className = "";
-                if (!intervals.slide && assets.length > 0) {
-                    intervals.slide = window.setInterval(function () {
-                        advanceToNext();
-                    }, (config.interval || 20) * 1000);
-                    startProgress();
+                days = ["domingo", "segunda-feira", "terça-feira", "quarta-feira", "quinta-feira", "sexta-feira", "sábado"];
+                months = ["janeiro", "fevereiro", "março", "abril", "maio", "junho",
+                          "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
+            }
+            return { days: days, months: months };
+        }
+
+        // ES5 token formatter: eeee, d, dd, MMMM, MM, yyyy + 'literal' text.
+        function formatDateTokens(fmt, values) {
+            var out = "";
+            var i = 0;
+            while (i < fmt.length) {
+                var ch = fmt.charAt(i);
+                if (ch === "'") {
+                    i++;
+                    var literal = "";
+                    while (i < fmt.length && fmt.charAt(i) !== "'") {
+                        literal += fmt.charAt(i);
+                        i++;
+                    }
+                    if (i < fmt.length) i++;
+                    out += literal;
+                    continue;
                 }
+                if (fmt.substr(i, 4) === "eeee") { out += values.eeee; i += 4; continue; }
+                if (fmt.substr(i, 4) === "MMMM") { out += values.MMMM; i += 4; continue; }
+                if (fmt.substr(i, 4) === "yyyy") { out += values.yyyy; i += 4; continue; }
+                if (fmt.substr(i, 2) === "dd") { out += values.dd; i += 2; continue; }
+                if (fmt.substr(i, 2) === "MM") { out += values.MM; i += 2; continue; }
+                if (ch === "d") { out += values.d; i++; continue; }
+                out += ch;
+                i++;
+            }
+            return out;
+        }
+
+        // Photo date: prefer the backend-provided formattedDate, otherwise parse manually.
+        function formatDate(asset, format) {
+            if (!asset) return "";
+            if (asset.formattedDate) return asset.formattedDate;
+
+            var dateStr = asset.date || "";
+            if (!dateStr) return "";
+
+            var year, month, day, dayIdx;
+            var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(dateStr);
+            if (m) {
+                year = parseInt(m[1], 10);
+                month = parseInt(m[2], 10) - 1;
+                day = parseInt(m[3], 10);
+                // Date.UTC + getUTCDay avoids timezone/Invalid Date bugs on iOS 9.
+                dayIdx = (new Date(Date.UTC(year, month, day))).getUTCDay();
+            } else {
+                var d = new Date(dateStr);
+                if (isNaN(d.getTime())) return "";
+                year = d.getFullYear();
+                month = d.getMonth();
+                day = d.getDate();
+                dayIdx = d.getDay();
+            }
+
+            var names = getDateNames(getLanguage());
+            var values = {
+                eeee: names.days[dayIdx],
+                MMMM: names.months[month],
+                yyyy: "" + year,
+                dd: day < 10 ? "0" + day : "" + day,
+                d: "" + day,
+                MM: (month + 1) < 10 ? "0" + (month + 1) : "" + (month + 1)
+            };
+            return formatDateTokens(format || "dd/MM/yyyy", values);
+        }
+
+        function updateClock() {
+            if (!config.showClock) {
+                if (clockEl) clockEl.style.display = "none";
+                if (clockDateEl) clockDateEl.style.display = "none";
+                return;
+            }
+
+            if (clockEl) clockEl.style.display = "";
+            if (clockDateEl) clockDateEl.style.display = "";
+
+            var now = getServerTime();
+            var h, m, s, dayIdx, dateNum, monthIdx, year;
+
+            if (serverTimeOffset !== null) {
+                h = padZero(now.getUTCHours());
+                m = padZero(now.getUTCMinutes());
+                s = padZero(now.getUTCSeconds());
+                dayIdx = now.getUTCDay();
+                dateNum = now.getUTCDate();
+                monthIdx = now.getUTCMonth();
+                year = now.getUTCFullYear();
+            } else {
+                h = padZero(now.getHours());
+                m = padZero(now.getMinutes());
+                s = padZero(now.getSeconds());
+                dayIdx = now.getDay();
+                dateNum = now.getDate();
+                monthIdx = now.getMonth();
+                year = now.getFullYear();
+            }
+
+            var clockText = config.clockFormat || "HH:mm";
+            clockText = clockText.replace("HH", h).replace("mm", m).replace("ss", s);
+            if (clockEl) { clockEl.innerHTML = clockText; }
+
+            if (clockDateEl) {
+                var lang = getLanguage();
+                var names = getDateNames(lang);
+                var defaultFmt = "eeee, d 'de' MMMM 'de' yyyy";
+                if (lang === "en") defaultFmt = "eeee, d MMMM yyyy";
+                else if (lang === "fr") defaultFmt = "eeee d MMMM yyyy";
+                else if (lang === "de") defaultFmt = "eeee, d. MMMM yyyy";
+                var fmt = config.clockDateFormat || defaultFmt;
+                clockDateEl.innerHTML = formatDateTokens(fmt, {
+                    eeee: names.days[dayIdx],
+                    MMMM: names.months[monthIdx],
+                    yyyy: "" + year,
+                    dd: dateNum < 10 ? "0" + dateNum : "" + dateNum,
+                    d: "" + dateNum,
+                    MM: (monthIdx + 1) < 10 ? "0" + (monthIdx + 1) : "" + (monthIdx + 1)
+                });
             }
         }
 
@@ -664,9 +989,7 @@
                     try {
                         var data = JSON.parse(xhr.responseText);
                         if (typeof data.year === "number" && typeof data.month === "number" && typeof data.day === "number") {
-                            // Converte a data/hora configurada no servidor em um timestamp UTC virtual.
-                            // Isso desacopla totalmente a exibição do relógio de qualquer fuso horário
-                            // ou horário de verão desatualizado do dispositivo cliente (ex: iPad iOS 9.3.5).
+                            // Virtual UTC timestamp: decouples the clock from the device timezone.
                             var targetMs = Date.UTC(data.year, data.month - 1, data.day, data.hour, data.minute, data.second || 0);
                             var clientNow = (new Date()).getTime();
                             serverTimeOffset = targetMs - clientNow;
@@ -689,12 +1012,100 @@
             return new Date(clientMs);
         }
 
-        function fetchWeather() {
-            var weatherEl = document.getElementById("weather");
-            var weatherIcon = document.getElementById("weather-icon");
-            var weatherTemp = document.getElementById("weather-temp");
-            var weatherDesc = document.getElementById("weather-desc");
+        // ---- Inline SVG weather icons (no external PNG) ----
+        function svgSun(cx, cy, r) {
+            var out = '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '"></circle>';
+            for (var i = 0; i < 8; i++) {
+                var a = i * Math.PI / 4;
+                var x1 = (cx + Math.cos(a) * (r + 3)).toFixed(1);
+                var y1 = (cy + Math.sin(a) * (r + 3)).toFixed(1);
+                var x2 = (cx + Math.cos(a) * (r + 8)).toFixed(1);
+                var y2 = (cy + Math.sin(a) * (r + 8)).toFixed(1);
+                out += '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '"></line>';
+            }
+            return out;
+        }
 
+        function svgMoon(cx, cy, r) {
+            return '<path d="M ' + (cx + r * 0.5) + ' ' + (cy - r) +
+                   ' A ' + r + ' ' + r + ' 0 1 0 ' + (cx + r * 0.5) + ' ' + (cy + r) +
+                   ' A ' + (r * 0.8) + ' ' + (r * 0.8) + ' 0 1 1 ' + (cx + r * 0.5) + ' ' + (cy - r) + ' Z"></path>';
+        }
+
+        function svgCloud(y) {
+            return '<path d="M16 ' + (y + 16) + ' a9 9 0 0 1 9 -9 a13 13 0 0 1 25 2 a9 9 0 0 1 -2 17 H24 a8 8 0 0 1 -8 -10 Z"></path>';
+        }
+
+        function svgRain(y) {
+            var out = "";
+            var xs = [24, 34, 44];
+            for (var i = 0; i < xs.length; i++) {
+                out += '<line x1="' + xs[i] + '" y1="' + (y + 34) + '" x2="' + (xs[i] - 3) + '" y2="' + (y + 42) + '"></line>';
+            }
+            return out;
+        }
+
+        function svgSnow(y) {
+            var out = "";
+            var xs = [24, 34, 44];
+            for (var i = 0; i < xs.length; i++) {
+                var cx = xs[i];
+                var cy = y + 38;
+                out += '<line x1="' + (cx - 4) + '" y1="' + cy + '" x2="' + (cx + 4) + '" y2="' + cy + '"></line>';
+                out += '<line x1="' + cx + '" y1="' + (cy - 4) + '" x2="' + cx + '" y2="' + (cy + 4) + '"></line>';
+            }
+            return out;
+        }
+
+        function svgFog(y) {
+            var out = "";
+            var ys = [y + 34, y + 40, y + 46];
+            for (var i = 0; i < ys.length; i++) {
+                out += '<line x1="16" y1="' + ys[i] + '" x2="48" y2="' + ys[i] + '"></line>';
+            }
+            return out;
+        }
+
+        function getWeatherSvg(iconId) {
+            var code = iconId || "01d";
+            if (code.length >= 3 && code.charAt(2) === "@") code = code.substr(0, 2) + code.charAt(3);
+            if (code.length > 3) code = code.substring(0, 3);
+            var night = code.charAt(2) === "n";
+            var base = code.substring(0, 2);
+            var body = "";
+
+            if (base === "01") {
+                body = night ? svgMoon(32, 32, 13) : svgSun(32, 32, 11);
+            } else if (base === "02") {
+                body = (night ? svgMoon(24, 22, 8) : svgSun(24, 22, 7)) + svgCloud(24);
+            } else if (base === "03" || base === "04") {
+                body = svgCloud(20);
+                if (base === "04") body += svgCloud(30);
+            } else if (base === "09" || base === "10") {
+                body = svgCloud(14);
+                if (base === "10") body += night ? svgMoon(20, 18, 7) : svgSun(20, 18, 7);
+                body += svgRain(18);
+            } else if (base === "11") {
+                body = svgCloud(14) + '<polygon points="32,36 26,48 31,48 29,56 40,43 34,43 37,36"></polygon>';
+            } else if (base === "13") {
+                body = svgCloud(14) + svgSnow(18);
+            } else if (base === "50") {
+                body = svgCloud(16) + svgFog(16);
+            } else {
+                body = night ? svgMoon(32, 32, 13) : svgSun(32, 32, 11);
+            }
+
+            return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="40" height="40" ' +
+                   'fill="none" stroke="' + themeStroke + '" stroke-width="2.5" ' +
+                   'stroke-linecap="round" stroke-linejoin="round">' + body + '</svg>';
+        }
+
+        function renderWeatherIcon(iconId) {
+            lastWeatherIcon = iconId || "01d";
+            if (weatherWrap) weatherWrap.innerHTML = getWeatherSvg(lastWeatherIcon);
+        }
+
+        function fetchWeather() {
             var xhr = new XMLHttpRequest();
             xhr.onreadystatechange = function () {
                 if (xhr.readyState === 4) {
@@ -702,11 +1113,32 @@
                         try {
                             var data = JSON.parse(xhr.responseText);
                             if (data.enabled && !data.error) {
-                                weatherIcon.src = data.iconUrl;
-                                weatherTemp.innerHTML = data.city + ", " + data.temp + data.unit;
-                                if (data.description) {
-                                    weatherDesc.innerHTML = data.description;
+                                var iconId = data.iconId;
+                                if (!iconId && data.iconUrl) {
+                                    var parts = data.iconUrl.split("/");
+                                    iconId = parts[parts.length - 1].replace(".png", "");
                                 }
+                                renderWeatherIcon(iconId);
+
+                                weatherTemp.innerHTML = data.city + ", " + data.temp + data.unit;
+
+                                if (config.showWeatherDescription !== false && data.description) {
+                                    weatherDesc.innerHTML = data.description;
+                                    weatherDesc.style.display = "";
+                                } else {
+                                    weatherDesc.innerHTML = "";
+                                    weatherDesc.style.display = "none";
+                                }
+
+                                if (config.showWeatherExtended !== false &&
+                                    data.tempMin !== undefined && data.tempMax !== undefined) {
+                                    weatherMinMax.innerHTML = "↓" + Math.round(data.tempMin) + "° ↑" + Math.round(data.tempMax) + "°";
+                                    weatherMinMax.style.display = "";
+                                } else {
+                                    weatherMinMax.innerHTML = "";
+                                    weatherMinMax.style.display = "none";
+                                }
+
                                 weatherEl.className = "visible";
                             } else {
                                 weatherEl.className = "";
@@ -719,116 +1151,36 @@
                     }
                 }
             };
-            xhr.onerror = function () {
-                weatherEl.className = "";
-                weatherIcon.onerror = function () {
-                    this.src = "/static/weather-default.png";
-                };
-                weatherIcon.src = "/static/weather-default.png";
-            };
+            xhr.onerror = function () { weatherEl.className = ""; };
             xhr.open("GET", "/api/weather", true);
             xhr.timeout = 10000;
             xhr.send(null);
         }
 
-        function formatDate(dateStr, format) {
-            if (!dateStr) return "";
-            var d = new Date(dateStr);
-            if (isNaN(d.getTime())) return "";
-
-            var lang = config.language || "pt";
-            var days, months;
-            if (lang === "en") {
-                days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-                months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
-                          "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-            } else {
-                days = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sab"];
-                months = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun",
-                          "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-            }
-
-            var day = d.getDate();
-            var month = d.getMonth();
-            var year = d.getFullYear();
-
-            var result = format;
-            result = result.replace("eeee", days[d.getDay()]);
-            result = result.replace("MMMM", months[month]);
-            result = result.replace("yyyy", year);
-            result = result.replace(/\bdd\b/, day < 10 ? "0" + day : "" + day);
-            result = result.replace(/\bd\b/, day);
-            result = result.replace("MM", month + 1 < 10 ? "0" + (month + 1) : "" + (month + 1));
-
-            result = result.replace(/'/g, "");
-
-            return result;
-        }
-
-        function updateClock() {
-            if (!config.showClock) {
-                if (clockEl) clockEl.style.display = "none";
-                if (clockDateEl) clockDateEl.style.display = "none";
-                return;
-            }
-
-            if (clockEl) clockEl.style.display = "";
-            if (clockDateEl) clockDateEl.style.display = "";
-
-            var now = getServerTime();
-            var h, m, s, dayIdx, dateNum, monthIdx;
-
-            if (serverTimeOffset !== null) {
-                h = padZero(now.getUTCHours());
-                m = padZero(now.getUTCMinutes());
-                s = padZero(now.getUTCSeconds());
-                dayIdx = now.getUTCDay();
-                dateNum = now.getUTCDate();
-                monthIdx = now.getUTCMonth();
-            } else {
-                h = padZero(now.getHours());
-                m = padZero(now.getMinutes());
-                s = padZero(now.getSeconds());
-                dayIdx = now.getDay();
-                dateNum = now.getDate();
-                monthIdx = now.getMonth();
-            }
-
-            var clockText = config.clockFormat || "HH:mm";
-            clockText = clockText.replace("HH", h).replace("mm", m).replace("ss", s);
-
-            if (clockEl) { clockEl.innerHTML = clockText; }
-
-            if (clockDateEl) {
-                var lang = config.language || "pt";
-                var days, months, de;
-                if (lang === "en") {
-                    days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-                    months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
-                              "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-                    de = " ";
-                } else {
-                    days = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sab"];
-                    months = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun",
-                              "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-                    de = " ";
-                }
-                clockDateEl.innerHTML = days[dayIdx] + ", " + dateNum + de + months[monthIdx];
-            }
-        }
-
+        // ---- Runtime theme (Jinja values are the CSS defaults) ----
         function applyConfig() {
-            var root = document.documentElement;
             if (config.primaryColor) {
-                root.style.setProperty("--primary-color", config.primaryColor);
+                themeStroke = config.primaryColor;
+                progressBar.style.background = config.primaryColor;
+                var svgEls = document.querySelectorAll(
+                    ".nav-arrow svg, #nav-pause svg, #pause-indicator svg, .info-icon svg, #settings-btn svg"
+                );
+                for (var i = 0; i < svgEls.length; i++) {
+                    svgEls[i].style.stroke = config.primaryColor;
+                }
+                memoryBadge.style.color = config.primaryColor;
+                memoryBadge.style.borderColor = config.primaryColor;
+                pauseIndicator.style.borderColor = config.primaryColor;
             }
             if (config.secondaryColor) {
-                root.style.setProperty("--secondary-color", config.secondaryColor);
                 document.body.style.backgroundColor = config.secondaryColor;
+                if (slideshow) slideshow.style.backgroundColor = config.secondaryColor;
             }
             if (config.baseFontSize) {
-                root.style.setProperty("--base-font-size", config.baseFontSize);
+                var bottomRight = document.getElementById("bottom-right");
+                if (bottomRight) bottomRight.style.fontSize = config.baseFontSize;
             }
+            renderWeatherIcon(lastWeatherIcon);
 
             if (!config.showProgressBar) {
                 progressBar.style.display = "none";
@@ -839,69 +1191,151 @@
             var locationRow = document.getElementById("info-location-row");
             var dateRow = document.getElementById("info-date-row");
 
-            if (!config.showAlbumName && albumRow) {
-                albumRow.style.display = "none";
-            }
-            if (!config.showPeopleDesc && peopleRow) {
-                peopleRow.style.display = "none";
-            }
-            if (!config.showImageLocation && locationRow) {
-                locationRow.style.display = "none";
-            }
-            if (!config.showPhotoDate && dateRow) {
-                dateRow.style.display = "none";
-            }
+            if (!config.showAlbumName && albumRow) albumRow.style.display = "none";
+            if (!config.showPeopleDesc && peopleRow) peopleRow.style.display = "none";
+            if (!config.showImageLocation && locationRow) locationRow.style.display = "none";
+            if (!config.showPhotoDate && dateRow) dateRow.style.display = "none";
         }
 
-        function updateInfo(asset) {
+        function joinInfo(a, b) {
+            if (!b) return a || "";
+            if (!a) return b;
+            if (a === b) return a;
+            return a + " \u2022 " + b;
+        }
+
+        function memoryLabel(yearsAgo) {
+            var n = parseInt(yearsAgo, 10);
+            var lang = getLanguage();
+            if (lang === "en") return n === 1 ? "1 year ago" : n + " years ago";
+            if (lang === "es") return n === 1 ? "Hace 1 año" : "Hace " + n + " años";
+            if (lang === "fr") return n === 1 ? "Il y a 1 an" : "Il y a " + n + " ans";
+            if (lang === "de") return n === 1 ? "Vor 1 Jahr" : "Vor " + n + " Jahren";
+            return n === 1 ? "Há 1 ano" : "Há " + n + " anos";
+        }
+
+        function updateInfo(asset, asset2) {
+            displayAsset = asset || null;
+            displayAsset2 = asset2 || null;
+
             var albumRow = document.getElementById("info-album-row");
             var peopleRow = document.getElementById("info-people-row");
             var locationRow = document.getElementById("info-location-row");
             var dateRow = document.getElementById("info-date-row");
+            var descRow = document.getElementById("info-desc-row");
 
-            if (config.showAlbumName && asset.albumName) {
-                infoAlbum.innerHTML = asset.albumName;
+            if (!asset) return;
+
+            var album = joinInfo(asset.albumName, asset2 && asset2.albumName);
+            if (config.showAlbumName && album) {
+                infoAlbum.innerHTML = album;
                 if (albumRow) albumRow.style.display = "";
             } else {
                 infoAlbum.innerHTML = "";
                 if (albumRow) albumRow.style.display = "none";
             }
 
-            if (config.showPeopleDesc && asset.people && asset.people.length > 0) {
-                infoPeople.innerHTML = asset.people.join(", ");
+            var peopleA = asset.people && asset.people.length ? asset.people.join(", ") : "";
+            var peopleB = asset2 && asset2.people && asset2.people.length ? asset2.people.join(", ") : "";
+            var people = joinInfo(peopleA, peopleB);
+            if (config.showPeopleDesc && people) {
+                infoPeople.innerHTML = people;
                 if (peopleRow) peopleRow.style.display = "";
             } else {
                 infoPeople.innerHTML = "";
                 if (peopleRow) peopleRow.style.display = "none";
             }
 
-            if (config.showImageLocation && asset.location) {
-                infoLocation.innerHTML = asset.location;
+            var location = joinInfo(asset.location, asset2 && asset2.location);
+            if (config.showImageLocation && location) {
+                infoLocation.innerHTML = location;
                 if (locationRow) locationRow.style.display = "";
             } else {
                 infoLocation.innerHTML = "";
                 if (locationRow) locationRow.style.display = "none";
             }
 
-            if (config.showPhotoDate && asset.date) {
+            if (config.showPhotoDate && (asset.date || (asset2 && asset2.date))) {
                 var fmt = config.photoDateFormat || "dd/MM/yyyy";
-                infoDate.innerHTML = formatDate(asset.date, fmt);
+                var dateA = formatDate(asset, fmt);
+                var dateB = asset2 ? formatDate(asset2, fmt) : "";
+                infoDate.innerHTML = joinInfo(dateA, dateB);
                 if (dateRow) dateRow.style.display = "";
             } else {
                 infoDate.innerHTML = "";
                 if (dateRow) dateRow.style.display = "none";
             }
+
+            var descA = asset.description || "";
+            var descB = asset2 ? (asset2.description || "") : "";
+            var desc = joinInfo(descA, descB);
+            if (config.showImageDesc && desc) {
+                infoDesc.innerHTML = desc;
+                if (descRow) descRow.style.display = "";
+            } else {
+                infoDesc.innerHTML = "";
+                if (descRow) descRow.style.display = "none";
+            }
+
+            // "On this day" badge refers to the current (first) asset.
+            if (config.showMemories !== false && asset.isMemory && asset.yearsAgo > 0) {
+                memoryBadge.innerHTML = memoryLabel(asset.yearsAgo);
+                memoryBadge.className = "active";
+            } else {
+                memoryBadge.innerHTML = "";
+                memoryBadge.className = "";
+            }
+        }
+
+        // ---- Timer management ----
+        function clearSlideTimer() {
+            if (intervals.slide) {
+                window.clearInterval(intervals.slide);
+                intervals.slide = null;
+            }
+            if (intervals.slideResume) {
+                window.clearTimeout(intervals.slideResume);
+                intervals.slideResume = null;
+            }
+        }
+
+        function startSlideTimer(delayMs) {
+            clearSlideTimer();
+            if (isPaused || isNightMode() || assets.length === 0) return;
+
+            var duration = (config.interval || 20) * 1000;
+            if (delayMs && delayMs > 50) {
+                intervals.slideResume = window.setTimeout(function () {
+                    intervals.slideResume = null;
+                    advanceToNext();
+                }, delayMs);
+            } else {
+                intervals.slide = window.setInterval(function () {
+                    advanceToNext();
+                }, duration);
+            }
+        }
+
+        function stopProgress() {
+            if (intervals.progress) {
+                window.clearInterval(intervals.progress);
+                intervals.progress = null;
+            }
+            progressWidth = 0;
+            if (progressBar) progressBar.style.width = "0%";
         }
 
         function startProgress() {
-            // Clear any existing progress interval
             if (intervals.progress) {
                 window.clearInterval(intervals.progress);
                 intervals.progress = null;
             }
             progressWidth = 0;
             progressBar.style.width = "0%";
+            // 500ms ticks: 100 / ((interval||20) * 2) = 2.5% per tick at 20s
+            // -> exactly 40 ticks = 100% at the right time, 5x fewer repaints.
             intervals.progress = window.setInterval(function () {
+                if (isPaused === true) return; // freeze while paused
                 progressWidth += 100 / ((config.interval || 20) * 2);
                 if (progressWidth >= 100) {
                     progressWidth = 100;
@@ -909,11 +1343,35 @@
                     intervals.progress = null;
                 }
                 progressBar.style.width = progressWidth + "%";
-            }, 100);
+            }, 500);
         }
 
-        function stopProgress() {
-            progressBar.style.width = "0%";
+        function togglePause() {
+            isPaused = !isPaused;
+            var duration = (config.interval || 20) * 1000;
+
+            if (isPaused) {
+                pausedRemainingMs = Math.max(0, duration * (1 - progressWidth / 100));
+                clearSlideTimer();
+            } else {
+                startSlideTimer(pausedRemainingMs);
+                pausedRemainingMs = 0;
+            }
+            updatePauseUI();
+        }
+
+        function updateNightMode() {
+            if (isNightMode()) {
+                nightOverlay.className = "active";
+                stopProgress();
+                clearSlideTimer();
+            } else {
+                nightOverlay.className = "";
+                if (!intervals.slide && !intervals.slideResume && assets.length > 0 && !isTransitioning) {
+                    startSlideTimer();
+                    if (!intervals.progress) startProgress();
+                }
+            }
         }
 
         function getThumbUrl(assetId) {
@@ -926,8 +1384,7 @@
                 if (xhr.readyState === 4) {
                     if (xhr.status === 200) {
                         try {
-                            var data = JSON.parse(xhr.responseText);
-                            callback(null, data);
+                            callback(null, JSON.parse(xhr.responseText));
                         } catch (e) {
                             callback("parse error");
                         }
@@ -942,124 +1399,216 @@
             xhr.send(null);
         }
 
-        function showImage(url, asset) {
-            if (!imgEl) { return; }
-
-            imgEl.onload = function () {
-                imgEl.className = "active";
-                isTransitioning = false;
-                updateInfo(asset);
-                startProgress();
-
-                // Fetch detailed info on demand (people, location)
-                if (asset.id) {
-                    fetchAssetDetails(asset.id, function (err, details) {
-                        if (!err && details) {
-                            if (details.people && details.people.length > 0) {
-                                asset.people = details.people;
-                            }
-                            if (details.location) {
-                                asset.location = details.location;
-                            }
-                            updateInfo(asset);
-                        }
-                    });
+        // Skip the extra details request when people/location already present
+        // or when the details were already fetched for this asset.
+        function maybeFetchDetails(asset) {
+            if (!asset || !asset.id || asset.detailsFetched) return;
+            if ((asset.people && asset.people.length > 0) || (asset.location && asset.location !== "")) {
+                asset.detailsFetched = true;
+                return;
+            }
+            asset.detailsFetched = true;
+            fetchAssetDetails(asset.id, function (err, details) {
+                if (!err && details) {
+                    if (details.people && details.people.length > 0) asset.people = details.people;
+                    if (details.location) asset.location = details.location;
+                    updateInfo(displayAsset, displayAsset2);
                 }
-            };
+            });
+        }
 
-            imgEl.onerror = function () {
+        // ---- Preloaders (released after every swap to protect low RAM) ----
+        var activePreloaders = [];
+        var activePreloadTimers = [];
+
+        function cleanupPreloaders() {
+            var i;
+            for (i = 0; i < activePreloaders.length; i++) {
+                var p = activePreloaders[i];
+                p.onload = null;
+                p.onerror = null;
+                p.src = "";
+            }
+            activePreloaders = [];
+            for (i = 0; i < activePreloadTimers.length; i++) {
+                window.clearTimeout(activePreloadTimers[i]);
+            }
+            activePreloadTimers = [];
+        }
+
+        function preloadURL(url, asset, onResult) {
+            var img = new Image();
+            var settled = false;
+            activePreloaders.push(img);
+
+            var timer = window.setTimeout(function () { finish(false); }, 8000);
+            activePreloadTimers.push(timer);
+
+            function finish(ok) {
+                if (settled) return;
+                settled = true;
+                window.clearTimeout(timer);
+                img.onload = null;
+                img.onerror = null;
+                if (!ok) img.src = "";
+                onResult(ok);
+            }
+
+            img.onload = function () {
+                if (asset && asset.isPortrait === undefined && img.naturalWidth && img.naturalHeight) {
+                    asset.isPortrait = img.naturalWidth < img.naturalHeight;
+                }
+                finish(true);
+            };
+            img.onerror = function () { finish(false); };
+            img.src = url;
+        }
+
+        function getAssetAt(index) {
+            if (assets.length === 0) return null;
+            var i = index % assets.length;
+            if (i < 0) i += assets.length;
+            return assets[i];
+        }
+
+        function onImageDisplayed(asset, asset2) {
+            isTransitioning = false;
+            updateInfo(asset, asset2);
+            maybeFetchDetails(asset);
+            if (asset2) maybeFetchDetails(asset2);
+            if (!isPaused && !isNightMode()) {
+                startProgress();
+                startSlideTimer();
+            }
+        }
+
+        function showSingle(url, asset) {
+            stepSize = 1;
+            splitContainer.className = "";
+            imgSingle.className = "slide-img";
+            var fired = false;
+
+            function done() {
+                if (fired) return;
+                fired = true;
+                imgSingle.className = "slide-img active";
+                onImageDisplayed(asset, null);
+            }
+
+            imgSingle.onload = done;
+            imgSingle.onerror = function () {
                 isTransitioning = false;
                 advanceToNext();
             };
-
-            imgEl.src = url;
+            imgSingle.src = url;
         }
 
-        var preloader = null;
-        var preloaderTimeout = null;
+        function showSplit(urlA, urlB, assetA, assetB) {
+            stepSize = 2;
+            imgSingle.className = "slide-img";
+            splitContainer.className = "active";
+            var loaded = 0;
+            var fired = false;
 
-        function preloadAndShow(url, asset) {
-            // Clean up previous preloader and release memory
-            if (preloader) {
-                preloader.onload = null;
-                preloader.onerror = null;
-                preloader.src = "";
-                preloader = null;
-            }
-            
-            if (preloaderTimeout) {
-                clearTimeout(preloaderTimeout);
-                preloaderTimeout = null;
-            }
-
-            preloader = new Image();
-            var done = false;
-
-            function onDone(success) {
-                if (done) { return; }
-                done = true;
-                if (preloaderTimeout) {
-                    clearTimeout(preloaderTimeout);
-                    preloaderTimeout = null;
+            function oneLoaded() {
+                loaded++;
+                if (loaded >= 2 && !fired) {
+                    fired = true;
+                    onImageDisplayed(assetA, assetB);
                 }
-                if (success) {
-                    showImage(url, asset);
-                } else {
+            }
+
+            imgLeft.onerror = function () { isTransitioning = false; advanceToNext(); };
+            imgRight.onerror = function () { isTransitioning = false; advanceToNext(); };
+            imgLeft.onload = oneLoaded;
+            imgRight.onload = oneLoaded;
+            imgLeft.src = urlA;
+            imgRight.src = urlB;
+        }
+
+        function preloadAndShow(url, asset, nextUrl, nextAsset) {
+            cleanupPreloaders();
+
+            var splitCandidate = window.innerWidth > window.innerHeight &&
+                                 config.splitPortrait !== false && assets.length > 1 &&
+                                 asset.isPortrait !== false;
+
+            if (!splitCandidate || !nextAsset) {
+                preloadURL(url, asset, function (ok) {
+                    if (!ok) {
+                        isTransitioning = false;
+                        advanceToNext();
+                        return;
+                    }
+                    showSingle(url, asset);
+                });
+                return;
+            }
+
+            // Preload both thumbnails, then decide single vs. split.
+            var doneA = false, doneB = false, okA = false, okB = false;
+
+            preloadURL(url, asset, function (ok) {
+                doneA = true; okA = ok; maybe();
+            });
+            preloadURL(nextUrl, nextAsset, function (ok) {
+                doneB = true; okB = ok; maybe();
+            });
+
+            function maybe() {
+                if (!doneA || !doneB) return;
+                if (!okA) {
                     isTransitioning = false;
                     advanceToNext();
+                    return;
+                }
+                var bothPortrait = asset.isPortrait === true && nextAsset.isPortrait === true;
+                if (bothPortrait && okB) {
+                    showSplit(url, nextUrl, asset, nextAsset);
+                } else {
+                    showSingle(url, asset);
                 }
             }
-
-            preloader.onload = function () { onDone(true); };
-            preloader.onerror = function () { onDone(false); };
-
-            preloader.src = url;
-
-            // Reduced timeout from 15s to 8s for iOS 9 compatibility
-            preloaderTimeout = window.setTimeout(function () {
-                if (!done) { onDone(false); }
-            }, 8000);
         }
 
         function goToIndex(index) {
-            // Clear intervals before navigating
             clearAllIntervals();
-            if (assets.length === 0) { return; }
-            if (isTransitioning) { return; }
+            if (assets.length === 0 || isTransitioning) return;
 
             stopProgress();
             isTransitioning = true;
-            currentIndex = index;
-            if (currentIndex >= assets.length) currentIndex = 0;
-            if (currentIndex < 0) currentIndex = assets.length - 1;
+            pausedRemainingMs = 0;
+
+            currentIndex = index % assets.length;
+            if (currentIndex < 0) currentIndex += assets.length;
 
             var asset = assets[currentIndex];
-            preloadAndShow(getThumbUrl(asset.id), asset);
+            var nextAsset = assets.length > 1 ? getAssetAt(currentIndex + 1) : null;
+            var nextUrl = nextAsset ? getThumbUrl(nextAsset.id) : null;
+
+            // The timer is (re)started in onImageDisplayed so the chosen photo
+            // always gets its full time on screen after a manual navigation.
+            preloadAndShow(getThumbUrl(asset.id), asset, nextUrl, nextAsset);
+        }
+
+        function startSlideshow() {
+            if (assets.length === 0) return;
+            isTransitioning = true;
+            currentIndex = 0;
+
+            var asset = assets[0];
+            var nextAsset = assets.length > 1 ? getAssetAt(1) : null;
+            var nextUrl = nextAsset ? getThumbUrl(nextAsset.id) : null;
+            preloadAndShow(getThumbUrl(asset.id), asset, nextUrl, nextAsset);
         }
 
         function advanceToNext() {
-            goToIndex(currentIndex + 1);
+            goToIndex(currentIndex + stepSize);
         }
 
-        window.prevImage = function () {
-            goToIndex(currentIndex - 1);
-        };
-
-        window.nextImage = function () {
-            goToIndex(currentIndex + 1);
-        };
-
-        function startSlideshow() {
-            if (assets.length === 0) { return; }
-
-            isTransitioning = true;
-            var asset = assets[0];
-            preloadAndShow(getThumbUrl(asset.id), asset);
-
-            intervals.slide = window.setInterval(function () {
-                advanceToNext();
-            }, (config.interval || 20) * 1000);
-        }
+        window.prevImage = function () { goToIndex(currentIndex - stepSize); };
+        window.nextImage = function () { goToIndex(currentIndex + stepSize); };
+        window.togglePause = togglePause;
 
         function fetchJSON(url, callback) {
             var xhr = new XMLHttpRequest();
@@ -1067,8 +1616,7 @@
                 if (xhr.readyState === 4) {
                     if (xhr.status === 200) {
                         try {
-                            var data = JSON.parse(xhr.responseText);
-                            callback(null, data);
+                            callback(null, JSON.parse(xhr.responseText));
                         } catch (e) {
                             callback("parse error");
                         }
@@ -1084,25 +1632,169 @@
             xhr.send(null);
         }
 
+        function shuffleArray(arr) {
+            for (var i = arr.length - 1; i > 0; i--) {
+                var j = Math.floor(Math.random() * (i + 1));
+                var temp = arr[i];
+                arr[i] = arr[j];
+                arr[j] = temp;
+            }
+        }
+
+        function prepareAssets() {
+            if (!config.shuffle || assets.length < 2) return;
+            if (config.prioritizeMemories) {
+                var memories = [];
+                var normal = [];
+                for (var i = 0; i < assets.length; i++) {
+                    if (assets[i].isMemory) memories.push(assets[i]);
+                    else normal.push(assets[i]);
+                }
+                shuffleArray(memories);
+                shuffleArray(normal);
+                assets = memories.concat(normal);
+            } else {
+                shuffleArray(assets);
+            }
+        }
+
+        function scheduleReconnect() {
+            if (reconnectTimer) return; // never stack retry timers
+            reconnectTimer = window.setTimeout(function () {
+                reconnectTimer = null;
+                loadSlideshowData();
+            }, 15000);
+        }
+
+        function loadSlideshowData() {
+            fetchJSON("/api/slideshow", function (err, data) {
+                if (err) {
+                    errorOverlay.className = "active";
+                    scheduleReconnect();
+                    return;
+                }
+
+                if (reconnectTimer) {
+                    window.clearTimeout(reconnectTimer);
+                    reconnectTimer = null;
+                }
+                errorOverlay.className = "";
+
+                assets = data.assets || [];
+                config = data.config || {};
+
+                initLocalSettings();
+                prepareAssets();
+                applyLocalSettings();
+                applyConfig();
+                updatePauseUI();
+                updateNightMode();
+                if (!isNightMode()) startSlideshow();
+            });
+        }
+
+        // ---- Gestures: swipe, double tap, keyboard ----
+        function isCentralArea(x, y) {
+            var w = window.innerWidth;
+            var h = window.innerHeight;
+            return x > w * 0.25 && x < w * 0.75 && y > h * 0.25 && y < h * 0.75;
+        }
+
+        function setupGestures() {
+            var startX = 0, startY = 0, lastTap = 0;
+
+            slideshow.addEventListener("touchstart", function (e) {
+                if (!e.touches || e.touches.length !== 1) return;
+                startX = e.touches[0].clientX;
+                startY = e.touches[0].clientY;
+            }, false);
+
+            slideshow.addEventListener("touchend", function (e) {
+                if (!e.changedTouches || e.changedTouches.length !== 1) return;
+                var diffX = e.changedTouches[0].clientX - startX;
+                var diffY = e.changedTouches[0].clientY - startY;
+                var now = (new Date()).getTime();
+
+                if (diffX < -50 && Math.abs(diffX) > Math.abs(diffY)) {
+                    lastTap = 0;
+                    nextImage();
+                    return;
+                }
+                if (diffX > 50 && Math.abs(diffX) > Math.abs(diffY)) {
+                    lastTap = 0;
+                    prevImage();
+                    return;
+                }
+
+                // Double tap (<350ms) in the central area toggles pause.
+                if (Math.abs(diffX) < 20 && Math.abs(diffY) < 20 && isCentralArea(startX, startY)) {
+                    if ((now - lastTap) < 350) {
+                        togglePause();
+                        lastTap = 0;
+                    } else {
+                        lastTap = now;
+                    }
+                } else {
+                    lastTap = 0;
+                }
+            }, false);
+
+            document.addEventListener("keydown", function (e) {
+                var key = e.keyCode || e.which;
+                if (key === 37) {
+                    prevImage();
+                } else if (key === 39) {
+                    nextImage();
+                } else if (key === 32) {
+                    if (e.preventDefault) e.preventDefault();
+                    togglePause();
+                }
+            }, false);
+        }
+
+        function showNav() {
+            navPrev.style.opacity = "0.5";
+            navNext.style.opacity = "0.5";
+            navPause.style.opacity = "0.5";
+            var settingsBtn = document.getElementById("settings-btn");
+            if (settingsBtn) settingsBtn.style.opacity = "0.5";
+
+            if (navHideTimer) window.clearTimeout(navHideTimer);
+            navHideTimer = window.setTimeout(function () {
+                navPrev.style.opacity = "0";
+                navNext.style.opacity = "0";
+                navPause.style.opacity = "0";
+                if (settingsBtn) settingsBtn.style.opacity = "0";
+                navHideTimer = null;
+            }, 3000);
+        }
+
+        // Clear non-essential intervals. autoReload must survive photo changes
+        // so the 30-minute reload is not cancelled on the first advance.
+        function clearAllIntervals() {
+            var keepKeys = ['slide', 'clock', 'serverTime', 'weather', 'nightMode', 'autoReload'];
+            for (var key in intervals) {
+                if (intervals[key] && keepKeys.indexOf(key) === -1) {
+                    window.clearInterval(intervals[key]);
+                    intervals[key] = null;
+                }
+            }
+        }
+        window.clearAllIntervals = clearAllIntervals;
+
         function init() {
-            var errorOverlay = document.getElementById("error-overlay");
-
-            loadLocalSettings();
-
             fetchServerTime();
-            intervals.serverTime = setInterval(fetchServerTime, 300000);
+            intervals.serverTime = window.setInterval(fetchServerTime, 300000);
 
             fetchWeather();
-            intervals.weather = setInterval(fetchWeather, 1800000);
+            intervals.weather = window.setInterval(fetchWeather, 1800000);
 
             updateClock();
             intervals.clock = window.setInterval(updateClock, 2000);
-
             intervals.nightMode = window.setInterval(updateNightMode, 60000);
 
-            // Auto-refresh every 30 minutes - clean up first
+            // Auto-refresh every 30 minutes; this interval is preserved by clearAllIntervals.
             intervals.autoReload = window.setInterval(function () {
-                // Clear all intervals
                 for (var key in intervals) {
                     if (intervals[key]) {
                         window.clearInterval(intervals[key]);
@@ -1112,51 +1804,12 @@
                 window.location.reload();
             }, 1800000);
 
-            var hideTimer;
-            function showNav() {
-                navPrev.style.opacity = "0.5";
-                navNext.style.opacity = "0.5";
-                navPrev.style.display = "";
-                navNext.style.display = "";
-                document.getElementById("settings-btn").style.opacity = "0.5";
-                clearTimeout(hideTimer);
-                intervals.navHide = window.setTimeout(function () {
-                    navPrev.style.opacity = "0";
-                    navNext.style.opacity = "0";
-                    document.getElementById("settings-btn").style.opacity = "0";
-                }, 3000);
-            }
+            document.addEventListener("mousemove", showNav, false);
+            document.addEventListener("touchstart", showNav, false);
+            setupGestures();
+            updatePauseUI();
 
-            document.addEventListener("mousemove", showNav);
-            document.addEventListener("touchstart", showNav);
-
-            fetchJSON("/api/slideshow", function (err, data) {
-                if (err) {
-                    errorOverlay.className = "active";
-                    return;
-                }
-
-                errorOverlay.className = "";
-                assets = data.assets || [];
-                config = data.config || {};
-
-                applyLocalSettings();
-
-                if (localSettings.shuffle && assets.length > 1) {
-                    for (var i = assets.length - 1; i > 0; i--) {
-                        var j = Math.floor(Math.random() * (i + 1));
-                        var temp = assets[i];
-                        assets[i] = assets[j];
-                        assets[j] = temp;
-                    }
-                }
-
-                applyConfig();
-                updateNightMode();
-                if (!isNightMode()) {
-                    startSlideshow();
-                }
-            });
+            loadSlideshowData();
         }
 
         if (document.readyState === "complete" || document.readyState === "interactive") {
@@ -1164,22 +1817,6 @@
         } else {
             document.addEventListener("DOMContentLoaded", init);
         }
-
-    
-        // Function to clear non-essential intervals (keep slideshow running)
-        function clearAllIntervals() {
-            var keepKeys = ['slide', 'clock', 'serverTime', 'weather', 'nightMode'];  // Keep essential intervals alive
-            for (var key in intervals) {
-                if (intervals[key] && keepKeys.indexOf(key) === -1) {
-                    window.clearInterval(intervals[key]);
-                    intervals[key] = null;
-                }
-            }
-        }
-
-        // Make clearAllIntervals available globally
-        window.clearAllIntervals = clearAllIntervals;
-
     })();
     </script>
 </body>

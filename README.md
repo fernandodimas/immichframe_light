@@ -5,12 +5,14 @@ Digital photo frame for Immich, optimized for legacy devices like iPad Mini 1 ru
 ## Features
 
 - **ES5 Compatible** - Pure vanilla JavaScript, works on iOS 9.3.5 Safari/Dolphin
-- **Weather Display** - Current weather with temperature and description (OpenWeatherMap)
-- **Photo Info** - Album name, people, location, and date with SVG icons
-- **Image Effects** - Ken Burns zoom, pan animations, and fill mode
+- **Multiple Albums** - Combine assets from several albums using comma-separated IDs
+- **Memories** - Highlight photos taken on this day in previous years
+- **Weather Display** - Current weather with temperature, description and extended info (OpenWeatherMap)
+- **Photo Info** - Album name, people, location, date with SVG icons and portrait splitting
+- **Image Resizing** - Server-side thumbnail resizing/compression with Pillow and LRU caching
 - **Server Time Sync** - Accurate clock synchronized with server
 - **Responsive Design** - Works on tablets, phones, and desktop
-- **Docker Support** - Minimal image size, easy deployment
+- **Docker Support** - Minimal image served by Gunicorn, easy deployment
 
 ## Quick Start (Docker)
 
@@ -24,6 +26,12 @@ docker run -d \
   --name immichframe \
   --restart unless-stopped \
   immichframe-light
+```
+
+To use more than one album, separate the IDs with commas:
+
+```bash
+  -e IMMICH_ALBUM_ID=album_id_1,album_id_2,album_id_3 \
 ```
 
 ## Docker Compose
@@ -41,7 +49,7 @@ services:
       # Immich connection
       - IMMICH_URL=http://192.168.1.50:2283
       - IMMICH_API_KEY=your_api_key_here
-      - IMMICH_ALBUM_ID=your_album_uuid_here
+      - IMMICH_ALBUM_ID=your_album_uuid_here     # or "id1,id2,id3"
 
       # Slideshow settings
       - INTERVAL_SECONDS=20
@@ -61,6 +69,11 @@ services:
       - SHOW_IMAGE_LOCATION=true
       - LANGUAGE=pt
 
+      # Memories / layout
+      - SHOW_MEMORIES=true
+      - PRIORITIZE_MEMORIES=true
+      - SPLIT_PORTRAIT=true
+
       # Image effect settings
       - IMAGE_ZOOM=true
       - IMAGE_PAN=false
@@ -73,16 +86,27 @@ services:
       - BASE_FONT_SIZE=17px
       - IMAGE_LOCATION_FORMAT=City,State,Country
 
+      # Image resizing / cache
+      - RESIZE_IMAGES=true
+      - MAX_IMAGE_WIDTH=1024
+      - MAX_IMAGE_HEIGHT=768
+      - IMAGE_QUALITY=82
+      - THUMB_CACHE_SIZE=50
+
       # Weather settings
       - WEATHER_API_KEY=your_openweather_api_key
       - UNIT_SYSTEM=metric
       - WEATHER_LAT_LONG=40.730610,-73.935242
       - SHOW_WEATHER_DESCRIPTION=true
+      - SHOW_WEATHER_EXTENDED=true
 
       # Night mode
       - NIGHT_MODE=false
       - NIGHT_MODE_START=22:00
       - NIGHT_MODE_END=07:00
+
+      # Timezone
+      - TIMEZONE=-3
 ```
 
 ## Portainer Setup
@@ -100,7 +124,7 @@ services:
 |----------|-------------|---------|
 | `IMMICH_URL` | Base URL of your Immich server | `http://localhost:2283` |
 | `IMMICH_API_KEY` | API key from Immich user settings | (required) |
-| `IMMICH_ALBUM_ID` | UUID of the target album | (required) |
+| `IMMICH_ALBUM_ID` | One or more album UUIDs, separated by commas (e.g. `id1,id2`) | (required) |
 
 ### Slideshow Settings
 
@@ -119,12 +143,20 @@ services:
 | `CLOCK_DATE_FORMAT` | Date format for clock | `eeee, d 'de' MMMM 'de' yyyy` |
 | `SHOW_PROGRESS_BAR` | Display progress bar | `true` |
 | `SHOW_PHOTO_DATE` | Display photo date | `true` |
-| `PHOTO_DATE_FORMAT` | Date format for photos | `dd/MM/yyyy` |
+| `PHOTO_DATE_FORMAT` | Date format for photos (`dd`, `d`, `MM`, `MMMM`, `yyyy`, `eeee`) | `dd/MM/yyyy` |
 | `SHOW_IMAGE_DESC` | Display image description | `true` |
 | `SHOW_PEOPLE_DESC` | Display people names | `true` |
 | `SHOW_ALBUM_NAME` | Display album name | `true` |
 | `SHOW_IMAGE_LOCATION` | Display photo location | `true` |
-| `LANGUAGE` | Language for weather and UI | `pt` |
+| `LANGUAGE` | Language for dates and UI (`pt`, `en`, `es`, `fr`, `de`) | `pt` |
+
+### Memories / Layout
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `SHOW_MEMORIES` | Show photos taken on this day in previous years | `true` |
+| `PRIORITIZE_MEMORIES` | Sort memories to the top of the slideshow | `true` |
+| `SPLIT_PORTRAIT` | Split portrait photos into two panels | `true` |
 
 ### Image Effects
 
@@ -144,6 +176,18 @@ services:
 | `BASE_FONT_SIZE` | Base font size | `17px` |
 | `IMAGE_LOCATION_FORMAT` | Location format | `City,State,Country` |
 
+### Image Resizing / Cache
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `RESIZE_IMAGES` | Resize and compress thumbnails with Pillow before serving | `true` |
+| `MAX_IMAGE_WIDTH` | Maximum processed thumbnail width in pixels | `1024` |
+| `MAX_IMAGE_HEIGHT` | Maximum processed thumbnail height in pixels | `768` |
+| `IMAGE_QUALITY` | JPEG quality for processed thumbnails (1-100) | `82` |
+| `THUMB_CACHE_SIZE` | Number of processed thumbnails held in the in-memory LRU cache | `50` |
+
+> When `RESIZE_IMAGES=false` (or Pillow is unavailable), thumbnails are proxied from Immich without modification. Processed images are served with `Cache-Control: public, max-age=86400`.
+
 ### Weather Settings
 
 | Variable | Description | Default |
@@ -152,6 +196,9 @@ services:
 | `UNIT_SYSTEM` | Temperature unit | `metric` |
 | `WEATHER_LAT_LONG` | Weather location (lat,lon) | `40.730610,-73.935242` |
 | `SHOW_WEATHER_DESCRIPTION` | Display weather description | `true` |
+| `SHOW_WEATHER_EXTENDED` | Display min/max and feels-like temperatures | `true` |
+
+> Weather responses are cached in memory for 15 minutes. The frontend uses native SVG icons; the legacy `/api/weather-icon/<code>` route is kept for compatibility and returns 404 when no cached PNG exists.
 
 ### Night Mode
 
@@ -165,7 +212,7 @@ services:
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `TIMEZONE` | UTC offset in hours | (system default) |
+| `TIMEZONE` | UTC offset in hours, ISO offset or named timezone | (system default) |
 
 Examples:
 - `-3` for Brasilia (UTC-3)
@@ -179,6 +226,7 @@ Examples:
 2. Navigate to the album you want
 3. The URL will look like: `http://your-server:2283/albums/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`
 4. Copy the UUID from the URL
+5. To combine albums, list their UUIDs separated by commas in `IMMICH_ALBUM_ID`
 
 ## Getting an Immich API Key
 
@@ -208,6 +256,8 @@ python app.py
 ```
 
 Open `http://localhost:5000` in your browser.
+
+In production the container runs the app with Gunicorn (`app:app`, 1 worker / 4 threads, 60s timeout).
 
 ## Compatibility
 
